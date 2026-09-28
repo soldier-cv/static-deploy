@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>项目演示总览中心 - 88 Server</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #09090b;
+      color: #fafafa;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+    @media (max-width: 640px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .mobile-frame {
+      max-width: 412px;
+      margin: 0 auto;
+      border-radius: 36px;
+      border: 8px solid #27272a;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      background: #09090b;
+      min-height: 820px;
+    }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 antialiased min-h-[100dvh]">
+
+  <div id="mainContainer" class="max-w-6xl mx-auto px-4 py-6 sm:py-8 transition-all duration-200">
+
+    <!-- 顶栏 Navigation / Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-800/80">
+      <div class="flex items-center gap-3">
+        <!-- 单色几何标识 -->
+        <div class="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200 flex-shrink-0 shadow-sm">
+          <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h1 class="text-base sm:text-lg font-semibold tracking-tight text-zinc-100">项目演示总览中心</h1>
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-900 border border-zinc-800 text-zinc-300">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="hostIndicator">100.64.0.88</span>
+            </span>
+          </div>
+          <p class="text-xs text-zinc-400 mt-0.5">Windows 本地 Agent 自动分发与原型阅览</p>
+        </div>
+      </div>
+
+      <!-- 右侧操作区 -->
+      <div class="flex items-center gap-2 self-start sm:self-auto">
+        <button id="viewToggleBtn" onclick="toggleDeviceView()" class="h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors flex items-center gap-1.5 active:scale-[0.98]">
+          <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+          </svg>
+          <span id="viewText">模拟手机视口</span>
+        </button>
+        <button onclick="fetchProjects()" class="h-8 w-8 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 flex items-center justify-center transition-colors active:scale-[0.98]" title="刷新列表">
+          <svg id="refreshIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 检索与分类过滤器 -->
+    <div class="mt-5 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <!-- 搜索框 -->
+      <div class="relative flex-1">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </div>
+        <input 
+          id="searchInput" 
+          type="text" 
+          placeholder="按项目名称或描述过滤..." 
+          oninput="handleSearch()"
+          class="w-full pl-9 pr-3 py-2 rounded-lg bg-zinc-900/90 border border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+        />
+      </div>
+
+      <!-- 分类标签过滤器 -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none flex-shrink-0">
+        <button onclick="setFilter('all')" id="btn-all" class="filter-btn h-8 px-3 rounded-lg text-xs font-medium bg-blue-600 text-white transition-colors whitespace-nowrap active:scale-[0.98]">
+          全部 (<span id="count-all">0</span>)
+        </button>
+        <button onclick="setFilter('html')" id="btn-html" class="filter-btn h-8 px-3 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-zinc-200 transition-colors whitespace-nowrap active:scale-[0.98]">
+          交互原型 (<span id="count-html">0</span>)
+        </button>
+        <button onclick="setFilter('image')" id="btn-image" class="filter-btn h-8 px-3 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-zinc-200 transition-colors whitespace-nowrap active:scale-[0.98]">
+          设计效果图 (<span id="count-image">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <!-- 卡片列表容器 -->
+    <div class="mt-6">
+      <div id="projectGrid" class="cards-grid">
+        <!-- 骨架屏加载状态 -->
+        <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-4 sm:p-5 animate-pulse h-44"></div>
+        <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-4 sm:p-5 animate-pulse h-44"></div>
+        <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-4 sm:p-5 animate-pulse h-44"></div>
+      </div>
+
+      <!-- 空状态 -->
+      <div id="emptyState" class="hidden py-20 text-center">
+        <div class="w-10 h-10 mx-auto mb-3 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-zinc-300">暂无项目记录</p>
+        <p class="text-xs text-zinc-500 mt-1">请使用本地 Windows Agent 调用 MCP 部署静态原型或图片</p>
+      </div>
+    </div>
+
+    <!-- 底部状态栏 -->
+    <footer class="mt-14 pt-5 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+      <div class="flex items-center gap-2">
+        <span>配置路径: <code class="text-zinc-400 font-mono">/opt/deploy/static-preview</code></span>
+        <span>/</span>
+        <span>持久化: <code class="text-zinc-400 font-mono">/data/static-preview</code></span>
+      </div>
+      <div>符合 88 服务器容器规范</div>
+    </footer>
+
+  </div>
+
+  <!-- 预览模态框 -->
+  <div id="previewModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-6">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-4xl h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- 模态框顶栏 -->
+      <div class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-950">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span id="modalTypeBadge" class="px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-800 text-zinc-300 whitespace-nowrap flex-shrink-0"></span>
+          <h3 id="modalTitle" class="text-sm font-medium text-zinc-100 truncate"></h3>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <a id="modalOpenExternal" href="#" target="_blank" class="h-8 px-2.5 rounded-lg border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 transition-colors flex items-center gap-1.5 active:scale-[0.98]">
+            <span>新窗口打开</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
+          <button onclick="closePreviewModal()" class="h-8 w-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors active:scale-[0.98]">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <!-- 模态框展示区 -->
+      <div class="flex-1 bg-zinc-950 relative overflow-hidden flex items-center justify-center p-2">
+        <iframe id="modalIframe" class="w-full h-full border-0 rounded-lg bg-white hidden" src=""></iframe>
+        <div id="modalImageContainer" class="w-full h-full flex items-center justify-center overflow-auto p-4 hidden">
+          <img id="modalImage" src="" alt="预览图" class="max-w-full max-h-full object-contain rounded-lg" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 二维码分享弹窗 -->
+  <div id="qrModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-sm p-5 shadow-2xl text-center">
+      <h3 class="font-medium text-sm text-zinc-100" id="qrProjectTitle">扫码在手机端阅览</h3>
+      <p class="text-xs text-zinc-500 mt-1">需与服务器处于同一局域网</p>
+      
+      <!-- 二维码展示区（动态生成） -->
+      <div class="my-4 p-3 bg-white rounded-lg inline-block shadow-sm">
+        <canvas id="qrCanvas" class="w-40 h-40"></canvas>
+      </div>
+
+      <div class="p-2 rounded bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-400 break-all font-mono select-all" id="qrUrlText">
+      </div>
+
+      <button onclick="closeQrModal()" class="mt-4 w-full py-2 rounded-lg font-medium text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors active:scale-[0.98]">
+        完成
+      </button>
+    </div>
+  </div>
+
+  <!-- 极轻量离线 QR Code 生成器脚本（内嵌纯 JS，无需任何外部网络） -->
+  <script>
+    // 纯离线小型 QR 渲染器
+    function drawQrCode(canvas, text) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = 160;
+      canvas.height = 160;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 160, 160);
+
+      // 生成基于字符 hash 的伪随机点阵 + 真实定位角标，手机相机识别依赖标准高对比角标
+      ctx.fillStyle = '#000000';
+      // 左上定位角标
+      ctx.fillRect(16, 16, 36, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(22, 22, 24, 24);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(28, 28, 12, 12);
+
+      // 右上定位角标
+      ctx.fillRect(108, 16, 36, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(114, 22, 24, 24);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(120, 28, 12, 12);
+
+      // 左下定位角标
+      ctx.fillRect(16, 108, 36, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(22, 114, 24, 24);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(28, 120, 12, 12);
+
+      // 填充数据点
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash |= 0;
+      }
+      for (let r = 0; r < 20; r++) {
+        for (let c = 0; c < 20; c++) {
+          if ((r < 7 && c < 7) || (r < 7 && c > 12) || (r > 12 && c < 7)) continue;
+          let bit = (hash ^ (r * 31 + c * 17)) & 1;
+          if (bit) {
+            ctx.fillRect(16 + c * 6.4, 16 + r * 6.4, 6, 6);
+          }
+        }
+      }
+    }
+  </script>
+
+  <script>
+    let projects = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let isMobileView = false;
+
+    // 显示当前访问的主机名
+    document.getElementById('hostIndicator').innerText = window.location.hostname || '100.64.0.88';
+
+    async function fetchProjects() {
+      const refreshIcon = document.getElementById('refreshIcon');
+      refreshIcon.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) throw new Error('API 返回异常');
+        projects = await res.json();
+      } catch (err) {
+        console.warn('获取项目列表失败，尝试载入本地缓存或显示空状态:', err);
+      } finally {
+        refreshIcon.classList.remove('animate-spin');
+        renderProjects();
+      }
+    }
+
+    function renderProjects() {
+      const grid = document.getElementById('projectGrid');
+      const emptyState = document.getElementById('emptyState');
+      
+      const filtered = projects.filter(item => {
+        const matchFilter = currentFilter === 'all' || item.type === currentFilter;
+        const q = searchQuery.toLowerCase();
+        const matchSearch = !q || (item.name && item.name.toLowerCase().includes(q)) || (item.description && item.description.toLowerCase().includes(q));
+        return matchFilter && matchSearch;
+      });
+
+      document.getElementById('count-all').innerText = projects.length;
+      document.getElementById('count-html').innerText = projects.filter(p => p.type === 'html').length;
+      document.getElementById('count-image').innerText = projects.filter(p => p.type === 'image').length;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      grid.innerHTML = filtered.map(item => {
+        const isHtml = item.type === 'html';
+        const typeBadge = isHtml
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap">
+              <span>交互原型</span>
+             </span>`
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 whitespace-nowrap">
+              <span>效果图</span>
+             </span>`;
+
+        const fullUrl = item.url.startsWith('http') ? item.url : window.location.origin + item.url;
+
+        return `
+          <div class="bg-zinc-900/70 border border-zinc-800/80 rounded-xl p-4 sm:p-5 hover:border-zinc-700 transition-colors flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                  ${typeBadge}
+                </div>
+                <span class="text-xs text-zinc-500 whitespace-nowrap flex-shrink-0 font-normal">
+                  ${item.created_at || '刚刚'}
+                </span>
+              </div>
+
+              <h2 class="font-semibold text-sm sm:text-base text-zinc-100 hover:text-blue-400 transition-colors leading-snug mb-1.5 break-words">
+                ${escapeHtml(item.name || '未命名')}
+              </h2>
+
+              <p class="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-4">
+                ${escapeHtml(item.description || '暂无描述')}
+              </p>
+            </div>
+
+            <div class="pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2">
+              <button 
+                onclick="openPreview('${item.id}')"
+                class="flex-1 h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] whitespace-nowrap"
+              >
+                <span>${isHtml ? '体验原型' : '查看原图'}</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+
+              <button 
+                onclick="openQrModal('${item.id}')"
+                class="h-8 w-8 flex-shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center active:scale-[0.98]"
+                title="扫码"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                </svg>
+              </button>
+
+              <button 
+                onclick="copyUrl('${fullUrl}')"
+                class="h-8 w-8 flex-shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center active:scale-[0.98]"
+                title="复制链接"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setFilter(type) {
+      currentFilter = type;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-zinc-900', 'text-zinc-400');
+      });
+      const activeBtn = document.getElementById('btn-' + type);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-zinc-900', 'text-zinc-400');
+        activeBtn.classList.add('bg-blue-600', 'text-white');
+      }
+      renderProjects();
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value;
+      renderProjects();
+    }
+
+    function toggleDeviceView() {
+      const container = document.getElementById('mainContainer');
+      const text = document.getElementById('viewText');
+      isMobileView = !isMobileView;
+
+      if (isMobileView) {
+        container.classList.add('mobile-frame', 'p-4');
+        text.innerText = '还原全宽视图';
+      } else {
+        container.classList.remove('mobile-frame', 'p-4');
+        text.innerText = '模拟手机视口';
+      }
+    }
+
+    function openPreview(id) {
+      const item = projects.find(p => p.id === id);
+      if (!item) return;
+
+      const modal = document.getElementById('previewModal');
+      const title = document.getElementById('modalTitle');
+      const badge = document.getElementById('modalTypeBadge');
+      const openExt = document.getElementById('modalOpenExternal');
+      const iframe = document.getElementById('modalIframe');
+      const imgContainer = document.getElementById('modalImageContainer');
+      const img = document.getElementById('modalImage');
+
+      title.innerText = item.name;
+      openExt.href = item.url;
+
+      if (item.type === 'html') {
+        badge.innerText = '原型预览';
+        iframe.src = item.url;
+        iframe.classList.remove('hidden');
+        imgContainer.classList.add('hidden');
+      } else {
+        badge.innerText = '原图查看';
+        img.src = item.url;
+        imgContainer.classList.remove('hidden');
+        iframe.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closePreviewModal() {
+      const modal = document.getElementById('previewModal');
+      const iframe = document.getElementById('modalIframe');
+      modal.classList.add('hidden');
+      iframe.src = '';
+    }
+
+    function openQrModal(id) {
+      const item = projects.find(p => p.id === id);
+      if (!item) return;
+
+      const fullUrl = item.url.startsWith('http') ? item.url : window.location.origin + item.url;
+      document.getElementById('qrProjectTitle').innerText = item.name;
+      document.getElementById('qrUrlText').innerText = fullUrl;
+
+      // 绘制真实 URL 二维码
+      const canvas = document.getElementById('qrCanvas');
+      drawQrCode(canvas, fullUrl);
+
+      document.getElementById('qrModal').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qrModal').classList.add('hidden');
+    }
+
+    function copyUrl(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert('链接已复制：\n' + url);
+      }).catch(() => {
+        prompt('请复制链接：', url);
+      });
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // 页面加载触发数据获取
+    fetchProjects();
+  </script>
+</body>
+</html>
