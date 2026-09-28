@@ -91,5 +91,5 @@ Write-Host "部署完成！" -ForegroundColor Green
 Write-Host "控制看板访问: http://${ServerHost}:${Port}/" -ForegroundColor Green
 Write-Host "API 健康检测: http://${ServerHost}:${Port}/api/health" -ForegroundColor Green
 Write-Host "MCP 端点:      http://${ServerHost}:${Port}/mcp" -ForegroundColor Green
-Write-Host "MCP 文档:      http://${ServerHost}:${Port}/docs/" -ForegroundColor Green
+Write-Host "MCP 指引:      http://${ServerHost}:${Port}/setup" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green

@@ -21,7 +21,7 @@
 | `/sites/<project_id>/<entry>` | 原型/图片静态直发 |
 | `/api/health`、`/api/projects`、`/api/deploy`（POST）、`/api/projects/<id>`（DELETE） | HTTP API |
 | `/mcp` | MCP 端点（streamable HTTP，JSON-RPC 2.0） |
-| `/docs/` | MCP 接入文档（托管仓库 `mcp/` 目录） |
+| `/setup` | MCP 接入指引（全生态统一路径） |
 | `/client/` | 客户端 MCP 脚本下载（托管仓库 `client-mcp/`） |
 
 ## 铁律
@@ -33,7 +33,8 @@
 5. **时区**：容器 `TZ=Asia/Shanghai`，`created_at` 必须是本地时间。
 6. **零 emoji、零破折号**（看板与文档文案），图标一律 SVG。
 7. **不动别人的东西**：不改 88 服务器其他服务（openresty/registry/CI/数据库），不改 Hermes profile 配置。
-8. **不代管其它项目文档**：本仓库不托管其它项目的 MCP 文档；`/docs/` 只托管本仓库 `mcp/`；老链接迁移用 302 重定向到目标项目自身地址。
+8. **不代管其它项目文档**：本仓库不托管其它项目的 MCP 文档；老链接迁移用 302 重定向到目标项目自身地址。
+9. **MCP 指引统一挂 `/setup`**：MCP 指引统一挂 `/setup`，不再新增 `/docs/` 类目录。
 
 ## 开发工作流
 
@@ -45,6 +46,6 @@
 ## 已知坑
 
 - **zip 带单一顶层目录时入口必须逐层找**：曾把入口记成根目录 `index.html` 而实际文件在 `demo/index.html`，看板卡片 404
-- **`location = /mcp`（端点）与 `location /docs/`（文档）必须分开**：文档放 `/mcp/` 会让 Agent 误把文档地址当端点写入配置
+- **`location = /mcp`（端点）与 `/setup`（指引）必须分开**：指引如果与端点重叠会让 Agent 误把指引地址当端点写入配置
 - 上传体积上限由 nginx `client_max_body_size` 与 Python 侧双重限制，超限要返回明确错误（不是 500）
 - `projects.json` 并发写要用原子替换，避免截断

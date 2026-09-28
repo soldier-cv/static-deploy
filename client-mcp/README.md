@@ -22,7 +22,7 @@ http://100.64.0.88:8088/mcp
 
 远程模式读不到本机磁盘，工具参数是内容（`files` / `html` / `image_base64`）。本机 stdio 模式用于传本地路径（`source_path` / `image_path`）。两处 token 均可省略：服务端 `API_TOKEN` 留空则不校验；本机 `PREVIEW_API_TOKEN` 留空或未设置则不发送 `Authorization` 头。
 
-完整文档：`http://100.64.0.88:8088/docs/`
+完整文档：`http://100.64.0.88:8088/setup`
 
 ## 1. 支持接入的客户端
 
