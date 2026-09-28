@@ -1,17 +1,19 @@
-version: "3.8"
-
 services:
-  # 1. 静态分发与网关（Nginx Alpine，内存仅 ~8MB）
+  # 1. 静态分发与网关（Nginx Alpine）
   web:
     image: nginx:alpine
-    container_name: static-preview-web
+    container_name: static-deploy-web
     restart: unless-stopped
     ports:
       - "${PORT:-8088}:80"
+    environment:
+      - TZ=Asia/Shanghai
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./portal.html:/usr/share/nginx/html/index.html:ro
-      - ${DATA_DIR:-/data/static-preview}/sites:/data/sites:ro
+      - ${DATA_DIR:-/data/static-deploy}/sites:/data/sites:ro
+      - ../mcp:/usr/share/nginx/html/docs:ro
+      - ../client-mcp:/usr/share/nginx/html/client:ro
     depends_on:
       - api
     logging:
@@ -28,20 +30,22 @@ services:
           cpus: '0.05'
           memory: 32M
 
-  # 2. 部署接收与解压服务（Python 3 Alpine，内存仅 ~18MB，0 外部依赖）
+  # 2. 部署接收与解压服务（Python 3 Alpine，0 外部依赖）
   api:
     image: python:3.12-alpine
-    container_name: static-preview-api
+    container_name: static-deploy-api
     restart: unless-stopped
     command: python3 -u /app/receiver.py
     volumes:
       - ./receiver.py:/app/receiver.py:ro
-      - ${DATA_DIR:-/data/static-preview}:/data
+      - ${DATA_DIR:-/data/static-deploy}:/data
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       - DATA_DIR=/data
-      - API_TOKEN=${API_TOKEN:-lan-static-preview-token-2026}
+      - API_TOKEN=${API_TOKEN:-}
       - PORT=8089
       - PYTHONUNBUFFERED=1
+      - TZ=Asia/Shanghai
     logging:
       driver: "json-file"
       options:

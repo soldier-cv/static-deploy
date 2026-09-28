@@ -138,12 +138,20 @@
 
     <!-- 底部状态栏 -->
     <footer class="mt-14 pt-5 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
-      <div class="flex items-center gap-2">
-        <span>配置路径: <code class="text-zinc-400 font-mono">/opt/deploy/static-preview</code></span>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span>配置路径: <code class="text-zinc-400 font-mono">/opt/code/static-deploy</code></span>
         <span>/</span>
-        <span>持久化: <code class="text-zinc-400 font-mono">/data/static-preview</code></span>
+        <span>持久化: <code class="text-zinc-400 font-mono">/data/static-deploy</code></span>
       </div>
-      <div>符合 88 服务器容器规范</div>
+      <div class="flex items-center gap-3">
+        <a href="/docs/" class="inline-flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+          </svg>
+          <span>MCP 接入文档</span>
+        </a>
+        <span>符合 88 服务器容器规范</span>
+      </div>
     </footer>
 
   </div>
