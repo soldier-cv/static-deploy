@@ -71,6 +71,17 @@ try:
 except Exception:
     proc.kill()
 
+# 清理本次创建的项目
+import urllib.request as _u
+for lnk in [l for l in (link,) if l]:
+    pid = lnk.split("/sites/")[1].split("/")[0]
+    try:
+        req = _u.Request("http://%s:%s/api/projects/%s" % (HOST, PORT, pid), method="DELETE")
+        with _u.urlopen(req, timeout=15) as r:
+            check("清理 " + pid, r.status == 200, r.status)
+    except Exception as e:
+        print("FAIL 清理 %s | %s" % (pid, e))
+
 print("")
 print("RESULT: " + ("ALL PASS" if not FAILED else "FAILED: " + ", ".join(FAILED)))
 sys.exit(1 if FAILED else 0)
