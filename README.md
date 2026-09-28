@@ -23,7 +23,7 @@ static-deploy/
 │   ├── deploy_cli.py          # 本地命令行快速部署工具
 │   ├── mcp_config_example.json# Cursor / Claude / Antigravity 配置示例
 │   └── README.md              # 客户端接入详细文档
-├── mcp/                       # 集中式 MCP 接入文档（由本服务 /docs/ 托管）
+├── mcp/                       # static-deploy MCP 接入指引（由本服务 /docs/ 托管）
 ├── scripts/
 │   └── deploy_to_88.ps1       # SSH 到 88 后 git pull 并拉起容器
 ├── tools/
@@ -87,8 +87,7 @@ docker compose -f server/docker-compose.yml --env-file server/.env up -d
 
 完整接入说明、工具参数与 FAQ 见：
 
-* 文档中心：`http://100.64.0.88:8088/docs/`
-* 本项目文档：`http://100.64.0.88:8088/docs/static-deploy.md`
+* 本项目文档：`http://100.64.0.88:8088/docs/static-deploy.md`（或访问 `http://100.64.0.88:8088/docs/`）
 
 本机 stdio 模式仅在需要传本地路径（`source_path` / `image_path`）时使用，详见 `client-mcp/README.md`。
 

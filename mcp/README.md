@@ -1,16 +1,17 @@
-# MCP 接入文档中心
+# static-deploy MCP 接入指引
 
-各项目的 MCP 接入说明集中在本目录维护，与代码同仓（`static-deploy` 仓库 `mcp/` 目录）。
+本目录只维护 static-deploy 自身的 MCP 接入指引。
 
-在线地址（局域网，由本服务直接托管，改完即生效）：
+在线访问地址（局域网，由本服务直接托管）：
 
 ```
 http://100.64.0.88:8088/docs/
 ```
 
-| 项目 | MCP 端点 | 鉴权 | 文档 |
-|---|---|---|---|
-| static-deploy（原型与图片分发） | `http://100.64.0.88:8088/mcp` | 免鉴权（局域网内直连） | [static-deploy.md](static-deploy.md) |
-| ImageGallery（生图工作站） | `http://100.64.0.88:30904/mcp` | 需个人令牌 `X-API-Token` | [image-gallery.md](image-gallery.md) |
+## 文档归属规则
 
-新增一个项目：在本目录加 `<项目名>.md`，并在上表登记一行。文档只写「接入步骤 + 客户端配置模板 + 可执行 FAQ」，产品介绍与规则不进安装文档（接口本身就是权威数据源，复述会过时）。
+每个项目的 MCP 端点与接入文档由各项目自身独立维护与托管，禁止集中跨项目代管：
+
+1. static-deploy（原型与图片展示中心）：接入文档见 [static-deploy.md](static-deploy.md)（在线地址 `http://100.64.0.88:8088/docs/static-deploy.md`）。
+2. image-gallery（生图工作站）：文档由其自身服务托管，访问地址为 `http://100.64.0.88:30898/docs/mcp-setup.md`。
+3. trade-pulse（交易脉冲数据服务）：文档由其自身服务托管，访问地址为 `http://100.64.0.88:30899/docs/mcp-setup.md`。
