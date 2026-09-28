@@ -1,0 +1,15 @@
+{
+  "skills": [
+    {
+      "name": "static-deploy-mcp",
+      "description": "把原型/HTML/图片发布到服务器并拿到可访问链接：何时该调、接入配置、常用套路、排障（Hermes / Claude Code / Cursor 通用）",
+      "version": "1.0.0",
+      "files": [
+        "SKILL.md",
+        "references/config-snippet.md",
+        "references/publish-patterns.md",
+        "references/troubleshooting.md"
+      ]
+    }
+  ]
+}
