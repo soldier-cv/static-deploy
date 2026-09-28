@@ -1,8 +1,9 @@
 <#
 .SYNOPSIS
-    将 static-preview 自动化发布部署至 88 服务器 (100.64.0.88)
+    在 88 服务器上更新并启动 static-deploy
 .DESCRIPTION
-    遵循 server-88-deploy 规范，通过 SSH 传输配置与代码，初始化 /data 数据目录，并拉起容器。
+    SSH 到 88，在 /opt/code/static-deploy 执行 git pull --ff-only，再用 docker compose 拉起容器。
+    git 是唯一代码来源，不再逐文件传输。
 .EXAMPLE
     .\scripts\deploy_to_88.ps1
     .\scripts\deploy_to_88.ps1 -KeyPath "C:\Users\huaxu\.ssh\id_rsa"
@@ -23,14 +24,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectName = "static-preview"
-$ServerDir = Join-Path $PSScriptRoot "..\server"
+$ProjectName = "static-deploy"
+$RemoteRepo = "/opt/code/static-deploy"
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ">>> 准备部署 $ProjectName 至 88 服务器 ($ServerHost)" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
-# 自动定位私钥
 if (-not $KeyPath) {
     $candidateKeys = @(
         "C:\Users\huaxu\.ssh\cloud-box-ed25519",
@@ -57,50 +57,39 @@ if ($KeyPath -and (Test-Path $KeyPath)) {
 function Invoke-Remote {
     param([string]$Cmd)
     & ssh $sshOpts "$User@$ServerHost" $Cmd
-}
-
-# 1. 连通性与端口检查
-Write-Host "`n>>> [1/5] 检查服务器网络与端口 $Port..." -ForegroundColor Cyan
-$portCheck = Invoke-Remote "ss -tulpn | grep :$Port || echo 'PORT_FREE'"
-if ($portCheck -notlike "*PORT_FREE*") {
-    Write-Host "WARN: 端口 $Port 已被占用，如果是正在运行的旧版本容器则会在后续重建更新" -ForegroundColor Yellow
-} else {
-    Write-Host "OK: 端口 $Port 状态正常" -ForegroundColor Green
-}
-
-# 2. 创建目录
-Write-Host "`n>>> [2/5] 创建远程部署与数据目录..." -ForegroundColor Cyan
-Invoke-Remote "mkdir -p /opt/deploy/$ProjectName /data/$ProjectName/sites /data/$ProjectName/meta && chmod -R 755 /data/$ProjectName"
-
-# 3. 传输文件 (使用 Base64 传输避免换行符与转义问题)
-Write-Host "`n>>> [3/5] 同步服务端文件到 /opt/deploy/$ProjectName/ ..." -ForegroundColor Cyan
-
-$filesToSync = @("docker-compose.yml", ".env", "nginx.conf", "portal.html", "receiver.py", "OPERATIONS.md")
-
-foreach ($f in $filesToSync) {
-    $localFile = Join-Path $ServerDir $f
-    if (Test-Path $localFile) {
-        Write-Host "  -> 同步 $f" -ForegroundColor DarkGray
-        $content = [System.IO.File]::ReadAllText($localFile, [System.Text.Encoding]::UTF8)
-        $b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content))
-        Invoke-Remote "echo '$b64' | base64 -d > /opt/deploy/$ProjectName/$f"
+    if ($LASTEXITCODE -ne 0) {
+        throw "远程命令失败 (exit $LASTEXITCODE): $Cmd"
     }
 }
 
-# 赋执行权
-Invoke-Remote "chmod +x /opt/deploy/$ProjectName/receiver.py"
+# 1. 连通性与端口检查
+Write-Host "`n>>> [1/4] 检查服务器网络与端口 $Port..." -ForegroundColor Cyan
+$portCheck = & ssh $sshOpts "$User@$ServerHost" "ss -tulpn | grep :$Port || echo 'PORT_FREE'"
+if ($portCheck -notlike "*PORT_FREE*") {
+    Write-Host "OK: 端口 $Port 已在监听（将通过 compose up -d 滚动更新）" -ForegroundColor Yellow
+} else {
+    Write-Host "OK: 端口 $Port 当前空闲" -ForegroundColor Green
+}
 
-# 4. 启动容器
-Write-Host "`n>>> [4/5] 启动 Docker 容器 (force-recreate)..." -ForegroundColor Cyan
-Invoke-Remote "cd /opt/deploy/$ProjectName && docker compose up -d --force-recreate"
+# 2. git pull
+Write-Host "`n>>> [2/4] 在 $RemoteRepo 执行 git pull --ff-only ..." -ForegroundColor Cyan
+Invoke-Remote "cd $RemoteRepo && git pull --ff-only"
 
-# 5. 健康检查
-Write-Host "`n>>> [5/5] 等待服务初始化与健康检查..." -ForegroundColor Cyan
+# 3. 拉起容器
+Write-Host "`n>>> [3/4] docker compose up -d ..." -ForegroundColor Cyan
+Invoke-Remote "cd $RemoteRepo && docker compose -f server/docker-compose.yml --env-file server/.env up -d"
+
+# 4. 健康检查
+Write-Host "`n>>> [4/4] 等待服务初始化与健康检查..." -ForegroundColor Cyan
 Start-Sleep -Seconds 3
-Invoke-Remote "cd /opt/deploy/$ProjectName && docker compose ps"
+Invoke-Remote "cd $RemoteRepo && docker compose -f server/docker-compose.yml --env-file server/.env ps"
+$health = & ssh $sshOpts "$User@$ServerHost" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$Port/api/health"
+Write-Host "健康检查 HTTP $health" -ForegroundColor $(if ($health -eq "200") { "Green" } else { "Yellow" })
 
 Write-Host "`n============================================================" -ForegroundColor Green
 Write-Host "部署完成！" -ForegroundColor Green
 Write-Host "控制看板访问: http://${ServerHost}:${Port}/" -ForegroundColor Green
 Write-Host "API 健康检测: http://${ServerHost}:${Port}/api/health" -ForegroundColor Green
+Write-Host "MCP 端点:      http://${ServerHost}:${Port}/mcp" -ForegroundColor Green
+Write-Host "MCP 文档:      http://${ServerHost}:${Port}/docs/" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green

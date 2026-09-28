@@ -16,7 +16,7 @@ import zipfile
 # 默认配置（可通过环境变量覆盖）
 SERVER_HOST = os.environ.get("PREVIEW_SERVER_HOST", "100.64.0.88")
 SERVER_PORT = os.environ.get("PREVIEW_SERVER_PORT", "8088")
-API_TOKEN = os.environ.get("PREVIEW_API_TOKEN", "lan-static-preview-token-2026")
+API_TOKEN = os.environ.get("PREVIEW_API_TOKEN", "") or ""
 API_BASE_URL = f"http://{SERVER_HOST}:{SERVER_PORT}"
 
 
@@ -45,7 +45,6 @@ def send_deploy_request(file_bytes, project_name, description, project_type="htm
     """向 88 服务器发送部署请求"""
     url = f"{API_BASE_URL}/api/deploy"
     headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
         "X-Project-Name": urllib.parse.quote(project_name),
         "X-Project-Desc": urllib.parse.quote(description),
         "X-Project-Type": project_type,
@@ -53,6 +52,8 @@ def send_deploy_request(file_bytes, project_name, description, project_type="htm
         "Content-Type": "application/octet-stream",
         "Content-Length": str(len(file_bytes))
     }
+    if API_TOKEN:
+        headers["Authorization"] = f"Bearer {API_TOKEN}"
 
     req = urllib.request.Request(url, data=file_bytes, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
@@ -63,7 +64,10 @@ def send_deploy_request(file_bytes, project_name, description, project_type="htm
 def fetch_projects():
     """获取服务器上的所有项目"""
     url = f"{API_BASE_URL}/api/projects"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {API_TOKEN}"})
+    headers = {}
+    if API_TOKEN:
+        headers["Authorization"] = f"Bearer {API_TOKEN}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
@@ -72,7 +76,7 @@ def fetch_projects():
 TOOLS = [
     {
         "name": "deploy_static_project",
-        "description": "【核心工具】将 Windows 本地开发的静态原型（HTML/CSS/JS/图片文件夹或单HTML文件）打包上传至局域网 88 服务器（100.64.0.88），并返回可在手机端直接打开的局域网在线预览链接与二维码访问地址。",
+        "description": "【核心工具】将本机开发的静态原型（HTML/CSS/JS/图片文件夹或单HTML文件）打包上传至局域网 88 服务器（100.64.0.88），并返回可在手机端直接打开的局域网在线预览链接与二维码访问地址。",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -99,7 +103,7 @@ TOOLS = [
     },
     {
         "name": "upload_image",
-        "description": "将 Windows 本地生成的 AI 概念图/原型设计图上传至局域网 88 服务器，生成移动端可随时全屏手势阅览的直达链接。",
+        "description": "将本机生成的 AI 概念图/原型设计图上传至局域网 88 服务器，生成移动端可随时全屏手势阅览的直达链接。",
         "inputSchema": {
             "type": "object",
             "properties": {

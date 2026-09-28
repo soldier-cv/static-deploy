@@ -1,15 +1,7 @@
 {
   "mcpServers": {
-    "static-preview": {
-      "command": "python",
-      "args": [
-        "d:\\project\\static_deploy\\client-mcp\\mcp_server.py"
-      ],
-      "env": {
-        "PREVIEW_SERVER_HOST": "100.64.0.88",
-        "PREVIEW_SERVER_PORT": "8088",
-        "PREVIEW_API_TOKEN": "lan-static-preview-token-2026"
-      }
+    "static-deploy": {
+      "url": "http://100.64.0.88:8088/mcp"
     }
   }
 }
