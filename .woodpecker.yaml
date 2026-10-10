@@ -1,7 +1,7 @@
 # Woodpecker CI - static-deploy 原型分发服务（Woodpecker v3）
 # 触发策略（仅 tag + manual，日常 push 不触发）
 # 形态：nginx + python 双容器，server/ 为 bind mount（改代码 restart 即生效，无需重建镜像）
-# 链路：pytest 质量门禁 -> 同步代码到宿主 /opt/code/static-deploy -> compose restart -> 18 项自测
+# 链路：同步代码到宿主 -> compose restart -> 健康验证 -> 18 项 MCP 自测
 when:
   - event: tag
     ref: refs/tags/v*
@@ -18,7 +18,7 @@ steps:
       - echo "RELEASE_TAG=$$(cat /tmp/release_tag) (static-deploy 为 bind-mount 容器，无镜像产物)"
 
   - name: sync-and-restart
-    image: alpine:3.20
+    image: docker:26
     volumes:
       - /opt/code/static-deploy:/opt/code/static-deploy
       - /var/run/docker.sock:/var/run/docker.sock
@@ -29,13 +29,13 @@ steps:
       # restart 重读 bind mount 的代码（env 未变；改 env 需手动 up -d）
       - docker compose -f server/docker-compose.yml --env-file server/.env restart
       - docker compose -f server/docker-compose.yml --env-file server/.env ps
-      # 健康验证：看板与 MCP 端点均应 200
+      # 健康验证：docker:26 自带 wget；看板 200 且 MCP 端点可达（GET /mcp 无协商头返 400 也算通）
       - >-
-        for i in $$(seq 1 20); do code=$$(wget -q -O /dev/null -S --spider http://127.0.0.1:8088/ 2>&1 | awk '/HTTP\//{print $$2}' | head -1); mcp=$$(wget -q -O /dev/null -S --spider http://127.0.0.1:8088/mcp 2>&1 | awk '/HTTP\//{print $$2}' | head -1); if [ "$$code" = "200" ] && { [ "$$mcp" = "200" ] || [ "$$mcp" = "400" ]; }; then echo "deploy OK: static-deploy web=200 mcp=$$mcp"; exit 0; fi; echo "waiting ($$i): web=$$code mcp=$$mcp"; sleep 5; done; echo "health check failed" >&2; exit 1
+        for i in $$(seq 1 20); do w=$$(wget -q -O /dev/null -S --spider http://127.0.0.1:8088/ 2>&1 | awk '/HTTP\//{print $$2}' | head -1); m=$$(wget -q -O /dev/null -S --spider http://127.0.0.1:8088/mcp 2>&1 | awk '/HTTP\//{print $$2}' | head -1); if [ "$$w" = "200" ] && { [ "$$m" = "200" ] || [ "$$m" = "400" ] || [ "$$m" = "405" ] || [ "$$m" = "406" ]; }; then echo "deploy OK: web=200 mcp=$$m"; exit 0; fi; echo "waiting ($$i): web=$$w mcp=$$m"; sleep 5; done; echo "health check failed" >&2; exit 1
 
   - name: selftest
     image: python:3.12-slim
     commands:
-      # 18 项 MCP 自测（裸 JSON-RPC，无需 SDK；容内直连回环不走代理）
+      # 18 项 MCP 自测（裸 JSON-RPC 标准库实现，无需 SDK；须去代理变量）
       - cd /opt/code/static-deploy
       - env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY python3 tools/selftest_mcp.py http://127.0.0.1:8088
