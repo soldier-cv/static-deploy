@@ -40,4 +40,4 @@ steps:
     commands:
       # 18 项 MCP 自测（裸 JSON-RPC 标准库实现，无需 SDK；须去代理变量）
       - cd /opt/code/static-deploy
-      - env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY python3 tools/selftest_mcp.py http://127.0.0.1:8088
+      - env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY python3 tools/selftest_mcp.py http://172.17.0.1:8088
