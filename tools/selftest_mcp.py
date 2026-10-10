@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 
 DEFAULT_BASE = "http://127.0.0.1:8088"
-META_FILE = "/data/static-deploy/meta/projects.json"
+META_FILE = os.environ.get("SELFTEST_META_FILE", "/data/static-deploy/meta/projects.json")
 DATA_ROOT = "/data/static-deploy"
 PNG_1X1_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X89QAAAAASUVORK5CYII="
