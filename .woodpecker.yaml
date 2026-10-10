@@ -37,9 +37,12 @@ steps:
     image: python:3.12-slim
     volumes:
       - /opt/code/static-deploy:/opt/code/static-deploy
-      # selftest 会清理 /data/static-deploy 下的测试残留，须挂真实数据目录（只读不可——脚本要写 meta）
+      # selftest 会清理 /data/static-deploy 下的测试残留，须挂真实数据目录（脚本要写 meta）
       - /data/static-deploy:/data/static-deploy
     commands:
       # 18 项 MCP 自测（裸 JSON-RPC 标准库实现，无需 SDK；须去代理变量）
+      # restart 后服务有就绪窗口，先等 8088 可达（最多 60s）再跑
       - cd /opt/code/static-deploy
+      - >-
+        for i in $$(seq 1 12); do python3 -c "import urllib.request;urllib.request.urlopen('http://172.17.0.1:8088/',timeout=3)" 2>/dev/null && echo ready && break; echo "wait ($$i)"; sleep 5; done
       - env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY python3 tools/selftest_mcp.py http://172.17.0.1:8088
