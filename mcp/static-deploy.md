@@ -1,13 +1,16 @@
-# static-deploy MCP — 接入指引
+# static-deploy — 接入指引
+
+> **只需要这一个链接：`http://100.64.0.88:8088/setup`**
+> MCP 配置、Agent 技能包安装、本地客户端、命令行直传、排障，全部在本页。
+> 把这一页发给对方即可，不需要再给别的地址。
 
 把本机开发的原型、生成的图片推到内网 88 服务器，拿到手机可直接点开的链接。
 
 ## 给 Agent 装能力（一次安装，之后它会自己判断何时调用）
 
-本服务把「何时该调这个 MCP、怎么接入、怎么排障」打包成 agent 技能包，自托管在这里：
+本服务把「何时该调这个 MCP、怎么接入、怎么排障」打包成 agent 技能包，由本服务自托管。装法二选一，下面的命令可直接复制：
 
-- 技能索引：`http://100.64.0.88:8088/.well-known/skills/index.json`
-- 安装（推荐，不依赖任何开关）：
+- 安装（推荐，不依赖任何开关，Hermes / 任何有 curl 的机器）：
   ```bash
   D=~/.hermes/skills/devops/static-deploy-mcp
   B=http://100.64.0.88:8088/.well-known/skills/static-deploy-mcp
@@ -18,7 +21,7 @@
   ```
 - 或一条命令装（需放行内网地址）：`HERMES_ALLOW_PRIVATE_URLS=1 hermes skills install http://100.64.0.88:8088/.well-known/skills/static-deploy-mcp/SKILL.md --category devops --yes`
   —— Hermes 的技能抓取带 SSRF 防护，默认屏蔽 `100.64.0.0/10` 等私网地址；**MCP 端点本身不受此限制**。
-- 其它 agent（Claude Code / Cursor）：把 MCP 配置片段写进其配置，并把技能里的「何时调用」提示词粘进 `CLAUDE.md` / `AGENTS.md`。
+- 其它 agent（Claude Code / Cursor）：把下面的 MCP 配置片段写进其配置，并把技能里的「何时调用」提示词粘进 `CLAUDE.md` / `AGENTS.md`。
 
 ## 服务地址（局域网，免鉴权，无需任何密码）
 
