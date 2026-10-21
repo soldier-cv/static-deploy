@@ -33,13 +33,41 @@ if hasattr(time, "tzset"):
 
 MAX_BODY_BYTES = 100 * 1024 * 1024
 MAX_CONTENT_BYTES = 20 * 1024 * 1024
+
+
+def _env_positive_int(name, default):
+    """读取正整数环境变量。未设置、空串或非法值时用 default。"""
+    raw = os.environ.get(name)
+    if raw is None or str(raw).strip() == "":
+        return default
+    try:
+        value = int(str(raw).strip(), 10)
+    except ValueError:
+        return default
+    if value <= 0:
+        return default
+    return value
+
+
+# 解压防护。HTTP Content-Length 只约束压缩后的请求体，压缩比没有上限，
+# 所以这三个值必须在解压过程中生效。同名环境变量可覆盖，便于以后调整。
+ZIP_MAX_TOTAL_BYTES = _env_positive_int("ZIP_MAX_TOTAL_BYTES", 2 * 1024 * 1024 * 1024)
+ZIP_MAX_SINGLE_BYTES = _env_positive_int("ZIP_MAX_SINGLE_BYTES", 256 * 1024 * 1024)
+ZIP_MAX_FILE_COUNT = _env_positive_int("ZIP_MAX_FILE_COUNT", 10000)
+ZIP_READ_CHUNK = 1024 * 1024
+
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
 MCP_PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18"}
 DEFAULT_PROTOCOL_VERSION = "2025-03-26"
 MCP_INSTRUCTIONS = (
-    "本服务可部署静态原型或图片，并返回手机可直接打开的局域网链接。"
-    "远程 MCP 只能传内容（files 映射、html 字符串或图片 base64），读不到客户端磁盘。"
-    "大文件请改用本机 stdio 客户端或 HTTP API。"
+    "本服务把静态原型或图片发布成手机可打开的局域网链接。"
+    "按体积分流：大内容放进 MCP 参数会按体积消耗 token。"
+    "单个 HTML 小于 20KB 用 deploy_static_project 的 html；"
+    "纯文本总量小于 200KB 用 files；"
+    "解码后小于 3MB 的单张图片用 upload_image。"
+    "达到或超过 200KB 的原型、含图片或字体的目录、解码后达到或超过 3MB 的图片，"
+    "改用 HTTP POST /api/deploy（zip 或图片原始字节，请求体上限 100MB，内容不进对话）。"
+    "MCP 内容硬上限 20MB。服务端读不到调用方磁盘。"
 )
 
 _meta_lock = threading.Lock()
@@ -354,25 +382,244 @@ def resolve_entry(project_dir, entry_file):
     return None
 
 
+class ZipLimitError(Exception):
+    """解压超过总量、单文件或文件数上限。message 同时包含上限值和建议做法。"""
+
+    def __init__(self, message, advice, limit_bytes=None, limit_count=None):
+        super().__init__(message)
+        self.message = message
+        self.advice = advice
+        self.limit_bytes = limit_bytes
+        self.limit_count = limit_count
+
+    def to_dict(self):
+        body = {"error": self.message, "advice": self.advice}
+        if self.limit_bytes is not None:
+            body["limit_bytes"] = self.limit_bytes
+        if self.limit_count is not None:
+            body["limit_count"] = self.limit_count
+        return body
+
+
+def _bytes_label(n):
+    if n % (1024 * 1024 * 1024) == 0 and n >= 1024 * 1024 * 1024:
+        return "%d 字节（%dGB）" % (n, n // (1024 * 1024 * 1024))
+    if n % (1024 * 1024) == 0 and n >= 1024 * 1024:
+        return "%d 字节（%dMB）" % (n, n // (1024 * 1024))
+    if n % 1024 == 0 and n >= 1024:
+        return "%d 字节（%dKB）" % (n, n // 1024)
+    return "%d 字节" % n
+
+
+def _zip_limit_advice_tail():
+    return (
+        "解压后总量上限 %s，单文件上限 %s，文件数上限 %d，HTTP 请求体上限 %s。"
+        % (
+            _bytes_label(ZIP_MAX_TOTAL_BYTES),
+            _bytes_label(ZIP_MAX_SINGLE_BYTES),
+            ZIP_MAX_FILE_COUNT,
+            _bytes_label(MAX_BODY_BYTES),
+        )
+    )
+
+
+def _total_limit_error():
+    limit = _bytes_label(ZIP_MAX_TOTAL_BYTES)
+    advice = (
+        "请删掉不需要的大资源，或把原型拆成多个项目，分别 POST /api/deploy 上传。"
+        "每个 zip 的请求体还要小于 %s。%s"
+        % (_bytes_label(MAX_BODY_BYTES), _zip_limit_advice_tail())
+    )
+    message = "解压后总体积超过上限 %s。已中止并删除未完成的目录。%s" % (limit, advice)
+    return ZipLimitError(message, advice=advice, limit_bytes=ZIP_MAX_TOTAL_BYTES)
+
+
+def _single_limit_error():
+    limit = _bytes_label(ZIP_MAX_SINGLE_BYTES)
+    advice = (
+        "请把该文件压到上限以内，或从 zip 中移除后再 POST /api/deploy。%s"
+        % _zip_limit_advice_tail()
+    )
+    message = "解压时单个文件超过上限 %s。已中止并删除未完成的目录。%s" % (limit, advice)
+    return ZipLimitError(message, advice=advice, limit_bytes=ZIP_MAX_SINGLE_BYTES)
+
+
+def _count_limit_error(kind):
+    extra = "空文件也计数。" if kind == "文件数" else ""
+    advice = (
+        "请减少包内%s后再 POST /api/deploy。%s%s"
+        % (kind, extra, _zip_limit_advice_tail())
+    )
+    message = "解压%s超过上限 %d。已中止并删除未完成的目录。%s" % (
+        kind,
+        ZIP_MAX_FILE_COUNT,
+        advice,
+    )
+    return ZipLimitError(message, advice=advice, limit_count=ZIP_MAX_FILE_COUNT)
+
+
+def _mcp_content_limit_message():
+    return (
+        "内容总量超过上限 %s。"
+        "MCP 会把 files 或 html 放进 JSON-RPC 参数，体积按 token 计费，不适合大文件。"
+        "请改用 HTTP 直传：在调用方机器上把目录打成 zip，POST /api/deploy，"
+        "请求头带上 X-Project-Name、X-Project-Desc、X-Project-Type: html、X-Entry-File。"
+        "请求体上限 %s，内容不进对话。"
+        "示例：curl -sS -X POST \"http://<主机>:8088/api/deploy\" "
+        "-H \"X-Project-Name: 名称\" -H \"X-Project-Desc: 描述\" "
+        "-H \"X-Project-Type: html\" -H \"X-Entry-File: index.html\" --data-binary @site.zip"
+        % (_bytes_label(MAX_CONTENT_BYTES), _bytes_label(MAX_BODY_BYTES))
+    )
+
+
+def _image_limit_message():
+    return (
+        "图片解码后超过上限 %s。"
+        "请改用 HTTP 直传原始字节：POST /api/deploy，"
+        "请求头 X-Project-Type: image，X-Entry-File 为文件名（例如 poster.png），"
+        "请求体是图片原始字节，上限 %s。"
+        "示例：curl -sS -X POST \"http://<主机>:8088/api/deploy\" "
+        "-H \"X-Project-Name: 名称\" -H \"X-Project-Desc: 描述\" "
+        "-H \"X-Project-Type: image\" -H \"X-Entry-File: poster.png\" --data-binary @poster.png"
+        % (_bytes_label(MAX_CONTENT_BYTES), _bytes_label(MAX_BODY_BYTES))
+    )
+
+
+def _discard_request_body(handler, length):
+    """把超限请求体按块丢掉，再返回 413。
+
+    nginx 开了 proxy_request_buffering off。上游若在读完 body 之前就响应，
+    nginx 会回 502，调用方看不到 JSON 里的上限和建议。公开入口的 body 已被
+    client_max_body_size 110M 挡住，这里再封顶，避免直连 API 时被超大
+    Content-Length 拖住。
+    """
+    remaining = length if isinstance(length, int) and length > 0 else 0
+    remaining = min(remaining, MAX_BODY_BYTES + 16 * 1024 * 1024)
+    while remaining > 0:
+        chunk = handler.rfile.read(min(remaining, 1024 * 1024))
+        if not chunk:
+            break
+        remaining -= len(chunk)
+
+
+def _body_limit_payload():
+    advice = (
+        "把 zip 或图片压到 %s 以下后重新 POST /api/deploy。"
+        "单个项目仍然放不下时，拆成多个项目分次上传。"
+        "MCP 只适合小内容：文本总量低于 200KB，或解码后低于 3MB 的单张图片。"
+        "MCP 内容硬上限是 %s，内容会计入 token。"
+        % (_bytes_label(MAX_BODY_BYTES), _bytes_label(MAX_CONTENT_BYTES))
+    )
+    error = "请求体超过上限 %s。%s" % (_bytes_label(MAX_BODY_BYTES), advice)
+    return {"error": error, "limit_bytes": MAX_BODY_BYTES, "advice": advice}
+
+
+def _rollback_project_dir(project_dir):
+    """只删除 SITES_DIR 的直接子目录，避免误删数据根。"""
+    if not project_dir or not isinstance(project_dir, str):
+        return
+    root = os.path.abspath(SITES_DIR)
+    target = os.path.abspath(project_dir)
+    if target == root:
+        return
+    try:
+        if os.path.commonpath([root, target]) != root:
+            return
+    except ValueError:
+        return
+    if os.path.dirname(target) != root:
+        return
+    if os.path.islink(target):
+        try:
+            os.unlink(target)
+        except OSError:
+            return
+        return
+    if os.path.isdir(target):
+        shutil.rmtree(target, ignore_errors=True)
+
+
+def _plan_zip_entries(archive, project_dir):
+    """列出将落盘的目录和文件。符号链接与越界路径沿用原行为：跳过，不计数。"""
+    directories = []
+    files = []
+    for member in archive.infolist():
+        filename = decode_zip_name(member.filename)
+        if member.is_dir() or filename.endswith("/"):
+            target_dir = safe_join(project_dir, filename.rstrip("/"))
+            if target_dir:
+                directories.append(target_dir)
+            continue
+        mode = member.external_attr >> 16
+        if mode and stat.S_ISLNK(mode):
+            continue
+        target_path = safe_join(project_dir, filename)
+        if not target_path:
+            continue
+        files.append((member, target_path))
+    return directories, files
+
+
+def _enforce_zip_plan(directories, files):
+    """用中央目录做快速拒绝。file_size 是未压缩大小的声明，不是请求体大小。"""
+    if len(files) > ZIP_MAX_FILE_COUNT:
+        raise _count_limit_error("文件数")
+    if len(directories) > ZIP_MAX_FILE_COUNT:
+        raise _count_limit_error("目录数")
+    declared_total = 0
+    for member, _target in files:
+        declared = member.file_size
+        if not isinstance(declared, int) or declared < 0:
+            declared = 0
+        if declared > ZIP_MAX_SINGLE_BYTES:
+            raise _single_limit_error()
+        declared_total += declared
+        if declared_total > ZIP_MAX_TOTAL_BYTES:
+            raise _total_limit_error()
+
+
+def _copy_with_limits(source, target, total_so_far):
+    """按块把 source 写入 target，返回写入后的累计字节。
+
+    中央目录的 file_size 只是声明。CPython zipfile 通常不会吐出超过该声明的字节，
+    但这里仍以实际读到的长度为准：先把这一块算进单文件和总量，确认没有越过上限再写。
+    会越限的那一块不写，调用方负责删除 project_dir。
+    """
+    written = 0
+    while True:
+        chunk = source.read(ZIP_READ_CHUNK)
+        if not chunk:
+            return total_so_far + written
+        new_written = written + len(chunk)
+        new_total = total_so_far + new_written
+        if new_written > ZIP_MAX_SINGLE_BYTES:
+            raise _single_limit_error()
+        if new_total > ZIP_MAX_TOTAL_BYTES:
+            raise _total_limit_error()
+        target.write(chunk)
+        written = new_written
+
+
 def extract_zip_safely(file_bytes, project_dir):
+    try:
+        _extract_zip_members(file_bytes, project_dir)
+    except Exception:
+        _rollback_project_dir(project_dir)
+        raise
+
+
+def _extract_zip_members(file_bytes, project_dir):
     zip_buffer = io.BytesIO(file_bytes)
-    with zipfile.ZipFile(zip_buffer, "r") as z:
-        for member in z.infolist():
-            filename = decode_zip_name(member.filename)
-            if member.is_dir() or filename.endswith("/"):
-                target_dir = safe_join(project_dir, filename.rstrip("/"))
-                if target_dir:
-                    os.makedirs(target_dir, exist_ok=True)
-                continue
-            mode = member.external_attr >> 16
-            if mode and stat.S_ISLNK(mode):
-                continue
-            target_path = safe_join(project_dir, filename)
-            if not target_path:
-                continue
+    with zipfile.ZipFile(zip_buffer, "r") as archive:
+        directories, files = _plan_zip_entries(archive, project_dir)
+        _enforce_zip_plan(directories, files)
+        for target_dir in directories:
+            os.makedirs(target_dir, exist_ok=True)
+        total = 0
+        for member, target_path in files:
             os.makedirs(os.path.dirname(target_path), exist_ok=True)
-            with z.open(member) as source, open(target_path, "wb") as target:
-                shutil.copyfileobj(source, target)
+            with archive.open(member) as source, open(target_path, "wb") as target:
+                total = _copy_with_limits(source, target, total)
 
 
 def write_files_map(project_dir, files_map):
@@ -389,7 +636,7 @@ def write_files_map(project_dir, files_map):
         raw = content.encode("utf-8")
         total += len(raw)
         if total > MAX_CONTENT_BYTES:
-            raise ValueError("内容总量超过 20MB")
+            raise ValueError(_mcp_content_limit_message())
         planned.append((target, raw))
     os.makedirs(project_dir, exist_ok=True)
     for target, raw in planned:
@@ -429,9 +676,23 @@ MCP_TOOLS = [
     {
         "name": "deploy_static_project",
         "description": (
-            "部署静态原型到局域网服务器，返回手机可打开的直达链接。"
-            "远程模式必须传 files（相对路径到文本内容）或 html 字符串，二者恰好给一个。"
-            "服务端读不到客户端磁盘，不要传本地路径。"
+            "部署静态原型并返回手机可打开的直达链接。"
+            "files 与 html 会整段进入 JSON-RPC 参数，体积按 token 计费"
+            "（实测约 179KB 文本约 5 万 token）。"
+            "服务端读不到调用方磁盘，不要传本地路径。files 与 html 必须恰好给一个。"
+            "按体积分流："
+            "单个 HTML 小于 20KB 时传 html；"
+            "纯文本多文件且 UTF-8 总量小于 200KB 时传 files（相对路径到文本）；"
+            "文本达到或超过 200KB，或含图片、字体、二进制，或要上传整个目录时，"
+            "改用 HTTP 直传。在调用方机器打包 zip，POST /api/deploy 发送原始字节"
+            "（不进对话，不消耗 token）。"
+            "请求头 X-Project-Name、X-Project-Desc、X-Project-Type: html、"
+            "X-Entry-File（默认 index.html）。请求体上限 100MB（104857600 字节）。"
+            "示例：curl -sS -X POST \"http://<主机>:8088/api/deploy\" "
+            "-H \"X-Project-Name: 名称\" -H \"X-Project-Desc: 描述\" "
+            "-H \"X-Project-Type: html\" -H \"X-Entry-File: index.html\" "
+            "--data-binary @site.zip。"
+            "本工具硬上限：内容总量 20MB（20971520 字节）。超过会被拒绝，并提示改走 HTTP 直传。"
         ),
         "inputSchema": {
             "type": "object",
@@ -446,12 +707,19 @@ MCP_TOOLS = [
                 },
                 "files": {
                     "type": "object",
-                    "description": "相对路径到文件文本内容的映射，例如 {\"index.html\": \"<!doctype html>...\"}",
+                    "description": (
+                        "相对路径到文本内容。UTF-8 总量小于 200KB 时使用。"
+                        "达到或超过 200KB，或含二进制时，改用 HTTP POST /api/deploy 上传 zip。"
+                        "硬上限 20MB（20971520 字节）。"
+                    ),
                     "additionalProperties": {"type": "string"},
                 },
                 "html": {
                     "type": "string",
-                    "description": "单文件 HTML 简写，等价于 files={\"index.html\": <html>}",
+                    "description": (
+                        "单个 HTML 小于 20KB 时使用，等价于 files={\"index.html\": <html>}。"
+                        "达到或超过 200KB 改用 HTTP POST /api/deploy 上传 zip。"
+                    ),
                 },
                 "entry_file": {
                     "type": "string",
@@ -464,7 +732,21 @@ MCP_TOOLS = [
     },
     {
         "name": "upload_image",
-        "description": "上传图片（base64）到局域网服务器，返回手机可打开的直达链接。",
+        "description": (
+            "上传一张较小的图片并返回手机可打开的直达链接。"
+            "image_base64 会进入 JSON-RPC 参数，base64 比原始字节大约 33%，按 token 计费。"
+            "按体积分流："
+            "解码后小于 3MB 的单张图片用本工具，filename 扩展名只能是 png、jpg、jpeg、gif、webp、svg，"
+            "允许 data:image/png;base64, 前缀；"
+            "解码后达到或超过 3MB，或要传多张图时，改用 HTTP 直传原始字节。"
+            "POST /api/deploy，请求头 X-Project-Type: image，X-Entry-File 为文件名（例如 poster.png），"
+            "请求体是图片原始字节，上限 100MB（104857600 字节）。"
+            "示例：curl -sS -X POST \"http://<主机>:8088/api/deploy\" "
+            "-H \"X-Project-Name: 名称\" -H \"X-Project-Desc: 描述\" "
+            "-H \"X-Project-Type: image\" -H \"X-Entry-File: poster.png\" "
+            "--data-binary @poster.png。"
+            "本工具硬上限：解码后 20MB（20971520 字节）。超过会被拒绝，并提示改走 HTTP。"
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -473,7 +755,11 @@ MCP_TOOLS = [
                 "filename": {"type": "string", "description": "文件名，扩展名须为 png/jpg/jpeg/gif/webp/svg"},
                 "image_base64": {
                     "type": "string",
-                    "description": "图片 base64，允许带 data:image/png;base64, 前缀",
+                    "description": (
+                        "图片 base64，允许带 data:image/png;base64, 前缀。"
+                        "解码后小于 3MB 时使用。达到或超过 3MB 改用 HTTP POST /api/deploy，"
+                        "请求头 X-Project-Type: image。解码硬上限 20MB（20971520 字节）。"
+                    ),
                 },
             },
             "required": ["project_name", "description", "filename", "image_base64"],
@@ -481,7 +767,14 @@ MCP_TOOLS = [
     },
     {
         "name": "list_projects",
-        "description": "列出最近已部署的静态原型与图片（最多 20 条），含绝对直达链接。",
+        "description": (
+            "列出最近已部署的静态原型与图片，最多 20 条，每条含手机可打开的绝对链接。"
+            "本工具不上传内容。"
+            "需要上传时按体积分流：小于 20KB 的单个 HTML，或小于 200KB 的纯文本，"
+            "用 deploy_static_project；解码后小于 3MB 的单张图片用 upload_image；"
+            "更大的原型或图片用 HTTP POST /api/deploy"
+            "（zip 或图片原始字节，请求体上限 100MB，内容不进对话）。"
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {},
@@ -604,7 +897,7 @@ def mcp_upload_image(args, host):
     except ValueError as e:
         raise ToolError(str(e))
     if len(img_bytes) > MAX_CONTENT_BYTES:
-        raise ToolError("图片解码后超过 20MB")
+        raise ToolError(_image_limit_message())
     if not img_bytes:
         raise ToolError("图片内容为空")
 
@@ -796,8 +1089,9 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(400, {"error": "Empty body"})
             return
         if content_length > MAX_BODY_BYTES:
+            _discard_request_body(self, content_length)
             self.close_connection = True
-            self._send_json(413, {"error": "Payload Too Large"}, extra_headers=[("Connection", "close")])
+            self._send_json(413, _body_limit_payload(), extra_headers=[("Connection", "close")])
             return
 
         file_bytes = self.rfile.read(content_length)
@@ -834,13 +1128,14 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
                 "entry": record["entry"],
                 "created_at": record["created_at"],
             })
+        except ZipLimitError as e:
+            _rollback_project_dir(project_dir)
+            self._send_json(400, e.to_dict())
         except ToolError as e:
-            if os.path.exists(project_dir):
-                shutil.rmtree(project_dir, ignore_errors=True)
+            _rollback_project_dir(project_dir)
             self._send_json(400, {"error": str(e)})
         except Exception as e:
-            if os.path.exists(project_dir):
-                shutil.rmtree(project_dir, ignore_errors=True)
+            _rollback_project_dir(project_dir)
             self._send_json(500, {"error": "处理失败: %s" % str(e)})
 
     def _mcp_session_headers(self):
@@ -881,10 +1176,23 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
         session_id, session_headers = self._mcp_session_headers()
         content_length = int(self.headers.get("Content-Length", 0) or 0)
         if content_length > MAX_BODY_BYTES:
+            _discard_request_body(self, content_length)
             self.close_connection = True
+            limited = _body_limit_payload()
             self._send_mcp_payload(
                 413,
-                {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Payload Too Large"}},
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {
+                        "code": -32600,
+                        "message": limited["error"],
+                        "data": {
+                            "limit_bytes": limited["limit_bytes"],
+                            "advice": limited["advice"],
+                        },
+                    },
+                },
                 session_headers + [("Connection", "close")],
                 as_sse=False,
             )
@@ -1027,8 +1335,16 @@ if __name__ == "__main__":
     server_address = ("0.0.0.0", PORT)
     httpd = ThreadingHTTPServer(server_address, DeployHandler)
     print(
-        "[static-deploy] 监听 0.0.0.0:%s 数据目录=%s 鉴权=%s"
-        % (PORT, DATA_DIR, "on" if API_TOKEN else "off"),
+        "[static-deploy] 监听 0.0.0.0:%s 数据目录=%s 鉴权=%s "
+        "解压上限 total=%s single=%s files=%s"
+        % (
+            PORT,
+            DATA_DIR,
+            "on" if API_TOKEN else "off",
+            ZIP_MAX_TOTAL_BYTES,
+            ZIP_MAX_SINGLE_BYTES,
+            ZIP_MAX_FILE_COUNT,
+        ),
         flush=True,
     )
     try:

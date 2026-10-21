@@ -45,3 +45,15 @@ python3 tools/selftest_mcp.py http://127.0.0.1:8088
 ## 4. 备份与数据持久化
 
 所有项目原型与设计图均保存在宿主机 `/data/static-deploy/sites/` 下，元数据保存在 `/data/static-deploy/meta/projects.json`。容器更新或重建不会造成任何数据丢失。
+
+## 5. 上传与解压上限
+
+HTTP 请求体上限 100MB（`MAX_BODY_BYTES`），同时受 nginx `client_max_body_size 110M` 约束，以便超限时由 API 返回 JSON 413。
+MCP 内容上限 20MB（`MAX_CONTENT_BYTES`），保持不变。
+解压另有三道上限，默认值写在 `server/receiver.py`，可用同名环境变量覆盖（正整数；非法值回落默认）：
+
+*   解压后总量 `ZIP_MAX_TOTAL_BYTES`，默认 2GB
+*   解压后单文件 `ZIP_MAX_SINGLE_BYTES`，默认 256MB
+*   解压文件数与显式目录数 `ZIP_MAX_FILE_COUNT`，默认各 10000
+
+环境变量只在 api 进程启动时读取。修改后执行 `docker compose -f server/docker-compose.yml --env-file server/.env restart api`。超限会删除该项目的半成品目录，并在 JSON 里给出上限值和建议做法。
