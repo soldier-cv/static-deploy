@@ -1,43 +1,57 @@
-# 客户端接入配置片段
+# 客户端接入配置
 
-## Hermes（自托管/本机）
-目标 profile 的 `config.yaml`：
-```yaml
-mcp_servers:
-  static-deploy:
-    url: http://100.64.0.88:8088/mcp
-    enabled: true
-```
-本服务**免鉴权**，不需要 token。改完重启对应网关生效。
+## 标准 MCP 客户端（Claude Code / Cursor / Cline / Windsurf 等）
 
-生效判据（该 profile 日志）：`tools.mcp_tool: MCP server 'static-deploy' (HTTP): registered N tool(s)`；出现 `registered 0 tool(s) (1 failed: ...)` 说明没连上，先 `curl -X POST http://100.64.0.88:8088/mcp`（initialize）看是否 200。
-
-## Claude Code / Cursor 等标准 MCP 客户端
 ```json
 {
   "mcpServers": {
-    "static-deploy": { "type": "http", "url": "http://100.64.0.88:8088/mcp" }
+    "static-deploy": {
+      "type": "http",
+      "url": "http://100.64.0.88:8088/mcp"
+    }
   }
 }
 ```
 
-## 技能包安装（本文件的来源）
-```bash
-D=~/.hermes/skills/devops/static-deploy-mcp
-B=http://100.64.0.88:8088/.well-known/skills/static-deploy-mcp
-mkdir -p "$D/references"
-for f in SKILL.md references/config-snippet.md references/publish-patterns.md references/troubleshooting.md; do
-  curl -fsSL "$B/$f" -o "$D/$f" || echo "FAIL $f"
-done
-```
-- 该服务只有内网入口，**用 `hermes skills install` 直接装会被 Hermes 的 SSRF 防护拦下**（默认屏蔽 `100.64.0.0/10` 等私网地址，报 `Could not download`）。要一条命令装，需加开关：
-  ```bash
-  HERMES_ALLOW_PRIVATE_URLS=1 hermes skills install http://100.64.0.88:8088/.well-known/skills/static-deploy-mcp/SKILL.md --category devops --yes
-  ```
-- 上面的 curl 版本不依赖任何开关，推荐作为默认做法。
+服务**免鉴权**，不需要 token、不需要 header。改完重启客户端生效。
 
-## 非 Hermes agent 的「何时调用」提示（粘进 CLAUDE.md / AGENTS.md）
+如果你的客户端用别的方式描述传输协议，只需要记住两项：
+- **端点 URL**：`http://100.64.0.88:8088/mcp`
+- **传输方式**：Streamable HTTP（JSON-RPC over POST）
+
+## 验证是否连上
+
+客户端里应该出现三个工具：`deploy_static_project`、`upload_image`、`list_projects`。
+或者直接探一下端点：
+
+```bash
+curl -s -X POST http://100.64.0.88:8088/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"probe","version":"0"}}}'
 ```
-原型/图片分发：本地生成的 HTML、截图、图片要让用户在手机上看到时，用 static-deploy MCP 发布，
-把返回的链接换成 http://100.64.0.88:8088 开头的地址再发人。参数以 http://100.64.0.88:8088/setup 为准。
+
+返回里带 `serverInfo` 即端点正常。
+
+## 让 agent 知道「什么时候该用」
+
+MCP 工具只告诉模型「有哪些参数」，不告诉它「什么场景该用、有什么坑」。
+把下面这段加到你 agent 的系统提示 / 规则文件 / `AGENTS.md` / `CLAUDE.md`：
+
 ```
+需要把原型、HTML、图片变成手机能打开的链接时，用 static-deploy：
+- 端点 http://100.64.0.88:8088/mcp（局域网、免鉴权）
+- 小内容（单文件 HTML 且小于 20KB）用 deploy_static_project 的 html 参数
+- 超过 200KB、含二进制资源、或整个目录，不要塞进 MCP 参数（会浪费大量 token），
+  改用 HTTP 直传：打包成 zip 后 POST 到 http://100.64.0.88:8088/api/deploy，
+  请求头带 X-Project-Name / X-Project-Type: html / X-Entry-File
+- 发布成功后把返回的 abs_url 直接发给用户（那是手机可打开的完整地址）
+- 完整说明见 http://100.64.0.88:8088/setup
+```
+
+## 如果支持技能包机制
+
+把本文件所在目录的 `SKILL.md` 与 `references/` 下三个文件一起放进你 agent 的技能目录即可。
+文件清单与下载地址见 `http://100.64.0.88:8088/setup`。
+
+不支持技能包的 agent，直接把上面那段「何时该用」的提示词加进规则文件就行——效果等价。
