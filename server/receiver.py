@@ -125,6 +125,137 @@ def public_host(headers):
     return host
 
 
+def decode_header_value(value, default=""):
+    """把项目 header 解成 Unicode，并对结果再调用一次保持不变。
+
+    http.server 按 latin-1 解码 header 字节。同一逻辑字符串有三种到达形态：
+    (a) 纯 ASCII 或已是正确 Unicode；(b) UTF-8 原始字节被 latin-1 误解码
+    （curl 直接写中文）；(c) percent-encoding（MCP 先 quote），可叠在 (b) 上。
+
+    顺序是「还原字节 → 一次 unquote → 校验 UTF-8」：
+    1. latin-1 编码能取回原始字节时，若这些字节是合法 UTF-8 就按 UTF-8 解码。
+       码位大于 U+00FF 的字符串不可能来自 latin-1，原样保留。于是 (b) 还原成
+       逻辑字符串，(a) 与已经还原过的结果都是不动点。
+    2. 再对连续的 %HH 做一次 percent-decode，且仅当这段正好是
+       urllib.parse.quote(解码结果)（十六进制大小写不敏感）并且结果是合法
+       UTF-8 时才采纳。MCP 只 quote 一次，这一层刚好还原；字面量 "%41"
+       不是 quote("A")，会留下，因此已解码结果再解一次不变。(c) 与 (a)(b)
+       得到同一个字符串。混合串 "%E5%BE%80%E6%9D%A5原型" 里，百分号段是 quote("往来")，
+       原文段原样接上，结果是「往来原型」。
+    3. 非法 UTF-8（如 %FF）、quote 不会产生的转义（如 %2e%2e%2f）保持字面量。
+       去掉 NUL。空白结果或任何异常返回 default。不会抛异常。
+    """
+    if value is None:
+        return default
+    try:
+        if isinstance(value, bytes):
+            try:
+                text = value.decode("utf-8")
+            except UnicodeDecodeError:
+                text = value.decode("latin-1", errors="replace")
+        elif isinstance(value, str):
+            text = value
+        else:
+            text = str(value)
+    except Exception:
+        return default
+
+    try:
+        text = _restore_utf8_header(text)
+        text = _unquote_utf8_header(text)
+        text = _as_utf8_text(text).replace("\x00", "")
+    except Exception:
+        try:
+            text = _as_utf8_text(text).replace("\x00", "")
+        except Exception:
+            return default
+    if not isinstance(text, str) or text.strip() == "":
+        return default
+    return text
+
+
+def _restore_utf8_header(text):
+    """撤销 http.server 的 latin-1 解码。原始字节不是 UTF-8 时保持原字符串。"""
+    try:
+        raw = text.encode("latin-1")
+    except UnicodeEncodeError:
+        return text
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return text
+
+
+def _unquote_once(text):
+    """一次 percent-decode。结果不是合法 UTF-8 时返回 (False, text)。"""
+    try:
+        decoded = urllib.parse.unquote(text, encoding="utf-8", errors="strict")
+    except (UnicodeDecodeError, UnicodeEncodeError, ValueError, LookupError):
+        return False, text
+    except Exception:
+        return False, text
+    try:
+        decoded.encode("utf-8")
+    except UnicodeEncodeError:
+        return False, text
+    return True, decoded
+
+
+def _is_hex(ch):
+    return ch in "0123456789abcdefABCDEF"
+
+
+def _quote_matches(run, decoded):
+    """run 是否正好是 urllib.parse.quote(decoded) 的一层编码。"""
+    try:
+        requoted = urllib.parse.quote(decoded, safe="/")
+    except Exception:
+        return False
+    return requoted.lower() == run.lower()
+
+
+def _unquote_utf8_header(text):
+    """只反解「quote 一次」的 %HH 段，已经解过的字面量 %HH 保持不动。"""
+    if "%" not in text:
+        return text
+    out = []
+    i = 0
+    n = len(text)
+    changed = False
+    while i < n:
+        if text[i] == "%" and i + 2 < n and _is_hex(text[i + 1]) and _is_hex(text[i + 2]):
+            j = i
+            while j + 2 < n and text[j] == "%" and _is_hex(text[j + 1]) and _is_hex(text[j + 2]):
+                j += 3
+            run = text[i:j]
+            ok, decoded = _unquote_once(run)
+            if ok and _quote_matches(run, decoded):
+                out.append(decoded)
+                changed = True
+            else:
+                out.append(run)
+            i = j
+        else:
+            out.append(text[i])
+            i += 1
+    if not changed:
+        return text
+    return "".join(out)
+
+
+def _as_utf8_text(text):
+    """孤立代理项换成 U+FFFD，避免随后按 UTF-8 写 JSON 时 500。
+
+    不使用 errors=replace：CPython 3.12 会写成 U+FFFD，3.14 对代理项会写成 "?"。
+    """
+    if not any(0xD800 <= ord(ch) <= 0xDFFF for ch in text):
+        return text
+    return "".join(
+        "�" if 0xD800 <= ord(ch) <= 0xDFFF else ch
+        for ch in text
+    )
+
+
 def new_project_id():
     timestamp_str = time.strftime("%Y%m%d-%H%M%S")
     return "p-%s-%s" % (timestamp_str, secrets.token_hex(2))
@@ -651,16 +782,14 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(401, {"error": "Unauthorized: 认证 Token 错误或缺失"})
             return
 
-        raw_name = self.headers.get("X-Project-Name", "未命名项目")
-        raw_desc = self.headers.get("X-Project-Desc", "无描述")
         project_type = (self.headers.get("X-Project-Type", "html") or "html").lower()
         entry_file = self.headers.get("X-Entry-File", "index.html") or "index.html"
         try:
-            project_name = urllib.parse.unquote(raw_name)
-            project_desc = urllib.parse.unquote(raw_desc)
+            project_name = decode_header_value(self.headers.get("X-Project-Name"), "未命名项目")
+            project_desc = decode_header_value(self.headers.get("X-Project-Desc"), "无描述")
         except Exception:
-            project_name = raw_name
-            project_desc = raw_desc
+            project_name = "未命名项目"
+            project_desc = "无描述"
 
         content_length = int(self.headers.get("Content-Length", 0) or 0)
         if content_length <= 0:

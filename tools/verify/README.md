@@ -8,6 +8,7 @@
 | `sd_mcp_client_check.py` | `mcp` SDK + `httpx` | 真实 MCP 客户端路径：initialize → tools/list → 两种部署 → 链接可访问 → 清理 |
 | `sd_mcp_adversarial.py` | 纯标准库 | 超大输入、zip slip（/api/deploy）、5 并发原子写、顶层目录入口回归、测试数据清理 |
 | `sd_stdio_check.py` | 纯标准库 | 本机 stdio 客户端脚本（`client-mcp/mcp_server.py`，按本地路径上传） |
+| `sd_header_decode.py` | 纯标准库 | 项目名与描述 header 的三种输入形态、恶意输入、MCP quote 回归；传入 base URL 时再打真实 `/api/deploy` |
 
 ## 用法
 
@@ -16,6 +17,8 @@
 python3 tools/selftest_mcp.py http://127.0.0.1:8088
 python3 tools/verify/sd_mcp_adversarial.py http://127.0.0.1:8088
 python3 tools/verify/sd_stdio_check.py 127.0.0.1 8088
+python3 tools/verify/sd_header_decode.py
+python3 tools/verify/sd_header_decode.py http://127.0.0.1:8088
 
 # SDK 脚本（需要 mcp + httpx 的环境）
 python3 -m venv /tmp/sdv && /tmp/sdv/bin/pip install mcp httpx -i https://pypi.tuna.tsinghua.edu.cn/simple
