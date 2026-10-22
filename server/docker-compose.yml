@@ -1,7 +1,7 @@
 services:
   # 1. 静态分发与网关（Nginx Alpine）
   web:
-    image: nginx:alpine
+    image: nginx:1.31.8-alpine
     container_name: static-deploy-web
     restart: unless-stopped
     ports:
