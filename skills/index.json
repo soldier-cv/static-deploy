@@ -10,6 +10,17 @@
         "references/publish-patterns.md",
         "references/troubleshooting.md"
       ]
+    },
+    {
+      "name": "desktop-release-ci-playbook",
+      "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
+      "version": "1.0.0",
+      "files": [
+        "SKILL.md",
+        "references/gitee-mirror.md",
+        "references/github-actions.md",
+        "references/woodpecker-compose.md"
+      ]
     }
   ]
 }
