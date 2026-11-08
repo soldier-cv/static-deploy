@@ -21,3 +21,4 @@ Thumbs.db
 
 # Logs
 *.log
+server/nginx.conf.bak
