@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""重建技能分发包的 index.json。
+
+单一真源原则：version 取自各 SKILL.md 的 frontmatter，files/sha256/updated_at
+由磁盘实际内容算出，只有 description 是人工维护（太长，不适合塞 frontmatter）。
+
+用法:
+    python3 sync_index.py            # 重写 index.json
+    python3 sync_index.py --check    # 只校验 index.json 是否与磁盘一致，不写盘
+
+退出码: 0 = 一致/已写入；1 = --check 下发现不一致
+"""
+import hashlib
+import json
+import os
+import re
+import sys
+from datetime import datetime, timedelta, timezone
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+INDEX = os.path.join(ROOT, "index.json")
+CST = timezone(timedelta(hours=8))
+
+
+def read_frontmatter(path):
+    text = open(path, encoding="utf-8").read()
+    meta = {}
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    if not m:
+        return meta
+    for line in m.group(1).splitlines():
+        if line.strip().startswith("#") or ":" not in line:
+            continue
+        key, val = line.split(":", 1)
+        meta[key.strip()] = val.strip().strip('"').strip("'")
+    return meta
+
+
+def sha256_of(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def collect(skill_dir):
+    name = os.path.basename(skill_dir)
+    skill_md = os.path.join(skill_dir, "SKILL.md")
+    if not os.path.isfile(skill_md):
+        return None
+    files = ["SKILL.md"]
+    ref_dir = os.path.join(skill_dir, "references")
+    if os.path.isdir(ref_dir):
+        for fn in sorted(os.listdir(ref_dir)):
+            if fn.endswith(".md") and os.path.isfile(os.path.join(ref_dir, fn)):
+                files.append(f"references/{fn}")
+
+    meta = read_frontmatter(skill_md)
+    newest = max(os.path.getmtime(os.path.join(skill_dir, f)) for f in files)
+    return {
+        "name": name,
+        "version": meta.get("version", "0.0.0"),
+        "updated_at": datetime.fromtimestamp(newest, CST).strftime("%Y-%m-%d %H:%M:%S"),
+        "files": files,
+        "sha256": {f: sha256_of(os.path.join(skill_dir, f)) for f in files},
+    }
+
+
+def main():
+    check_only = "--check" in sys.argv
+
+    old = {}
+    if os.path.isfile(INDEX):
+        try:
+            for s in json.load(open(INDEX, encoding="utf-8")).get("skills", []):
+                old[s["name"]] = s.get("description", "")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    skills = []
+    for entry in sorted(os.listdir(ROOT)):
+        path = os.path.join(ROOT, entry)
+        if not os.path.isdir(path) or entry.startswith("."):
+            continue
+        item = collect(path)
+        if not item:
+            continue
+        item["description"] = old.get(item["name"], "")
+        if not item["description"]:
+            item["description"] = read_frontmatter(os.path.join(path, "SKILL.md")).get("description", "")
+        # 保持字段顺序好读
+        skills.append({
+            "name": item["name"],
+            "description": item["description"],
+            "version": item["version"],
+            "updated_at": item["updated_at"],
+            "files": item["files"],
+            "sha256": item["sha256"],
+        })
+
+    payload = {
+        "schema": 2,
+        "updated_at": datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
+        "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
+        "install_root": "http://100.64.0.88:8088/.well-known/skills/",
+        "skills": skills,
+    }
+    rendered = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+    if check_only:
+        current = open(INDEX, encoding="utf-8").read() if os.path.isfile(INDEX) else ""
+        # 忽略 updated_at 这一行的差异
+        strip = lambda s: re.sub(r'"updated_at": ".*?"', "", s)
+        if strip(current) != strip(rendered):
+            print("index.json 与磁盘不一致，需要重跑 sync_index.py", file=sys.stderr)
+            return 1
+        print("index.json 与磁盘一致")
+        return 0
+
+    with open(INDEX, "w", encoding="utf-8") as f:
+        f.write(rendered)
+    print(f"已写入 {INDEX}，共 {len(skills)} 个技能")
+    for s in skills:
+        print(f"  {s['name']:<32} v{s['version']:<8} {len(s['files'])} 文件  {s['updated_at']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

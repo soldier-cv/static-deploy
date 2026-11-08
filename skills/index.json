@@ -1,26 +1,60 @@
 {
+  "schema": 2,
+  "updated_at": "2026-11-08 18:12:40",
+  "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
+  "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
-    {
-      "name": "static-deploy-mcp",
-      "description": "把原型/HTML/图片发布到服务器并拿到可访问链接：何时该调、接入配置、通道选择、常用套路、排障（任何 MCP 客户端通用）",
-      "version": "2.0.0",
-      "files": [
-        "SKILL.md",
-        "references/config-snippet.md",
-        "references/publish-patterns.md",
-        "references/troubleshooting.md"
-      ]
-    },
     {
       "name": "desktop-release-ci-playbook",
       "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
       "version": "1.0.0",
+      "updated_at": "2026-10-22 10:38:29",
       "files": [
         "SKILL.md",
         "references/gitee-mirror.md",
         "references/github-actions.md",
         "references/woodpecker-compose.md"
-      ]
+      ],
+      "sha256": {
+        "SKILL.md": "da59b2bc6115a7b70cfd109029fce2d667e0f33a43ba3ef7f3d35826b4ce038a",
+        "references/gitee-mirror.md": "f801241544ababbd25b11e7529675dc9b3b649537f3e022f82dd7963a61038a8",
+        "references/github-actions.md": "6e851cb1ba1ec643b8d37e580aa7b6f73202720cf7f2bd20f7c5ac593b47287d",
+        "references/woodpecker-compose.md": "7a8f47483a36daad426127e77d1b9966b3ef58a20251a2662cd49843cd9bbd57"
+      }
+    },
+    {
+      "name": "project-repo-standards",
+      "description": "项目仓库初始化规范：文件用途判据、CI 选型（Woodpecker/GHA 共存规则）、AGENTS.md 写法、按交付形态分层的升级机制（Web/桌面/安卓/固件/扩展）、Gitee 镜像、脚本经验",
+      "version": "1.2.0",
+      "updated_at": "2026-11-08 18:12:40",
+      "files": [
+        "SKILL.md",
+        "references/ci-coexistence.md",
+        "references/upgrade-by-delivery-type.md"
+      ],
+      "sha256": {
+        "SKILL.md": "37351636c55768fcc0145637a7be011035eab79106d8df18b2106b7798d45cfe",
+        "references/ci-coexistence.md": "2ae6bfbb51a336ccbce179090d144a73fdb53a61d6a3a28175dbecdb53e46076",
+        "references/upgrade-by-delivery-type.md": "307c7c0e34b64da37ac4d451ba811f6886aff51a8fdbcb0d75e8017ddcec975c"
+      }
+    },
+    {
+      "name": "static-deploy-mcp",
+      "description": "把原型/HTML/图片发布到服务器并拿到可访问链接：何时该调、接入配置、通道选择、常用套路、排障（任何 MCP 客户端通用）",
+      "version": "2.0.0",
+      "updated_at": "2026-10-21 23:07:57",
+      "files": [
+        "SKILL.md",
+        "references/config-snippet.md",
+        "references/publish-patterns.md",
+        "references/troubleshooting.md"
+      ],
+      "sha256": {
+        "SKILL.md": "864fe128fb2e2681ad0df0c03e4682c6136ff77c2b4f2d4007a582d7babd8a3c",
+        "references/config-snippet.md": "f6063fa063d7c53fd3f3e0873f8f38bdf6dbb27d1f4c8f189ce650356abfd52a",
+        "references/publish-patterns.md": "f69f9114911fc19e932f7d5ee1f7087bd984081402e539d3baa4b618986058ff",
+        "references/troubleshooting.md": "6306396f6ed7caa5bb0ca2f5944a40115ad37bc60206d41fc4de2e60610f7aae"
+      }
     }
   ]
 }
