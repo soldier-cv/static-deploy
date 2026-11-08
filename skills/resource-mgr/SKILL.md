@@ -1,7 +1,7 @@
 ---
 name: resource-mgr
 description: Use when 发布资源包、管理下载版本或设备拉包更新。
-version: 1.0.0
+version: 1.1.0
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -148,10 +148,46 @@ GET /r/<rawKey>/<version>/<file_name> # 精确版本（回滚用）
 ## 7. 部署与运维（改代码时）
 
 - 端口：宿主 `13000` → 容器 `3000`（**不要用 3000，已被 grafana 占用**）
-- 发版：`git tag vX.Y.Z && git push origin vX.Y.Z` → Woodpecker 构建镜像 → 推 `100.64.0.88:5000/resource-mgr` → 自动改宿主 `.env` 的 `TAG` 并 `docker compose up -d`
-- 回滚：把 `/opt/deploy/resource-mgr/.env` 的 `TAG` 改回旧版本 → `docker compose --env-file .env up -d`
-- 健康：`curl http://127.0.0.1:13000/health` → `{status, version, database, keys}`
 - 数据：`/data/resource-mgr`（SQLite + 文件存储），备份走 `/data` 周备
+- 回滚：把 `/opt/deploy/resource-mgr/.env` 的 `TAG` 改回旧版本号 → `docker compose --env-file .env up -d`（旧镜像仍在 registry）
+- 健康：`docker exec resource-mgr node -e "fetch('http://127.0.0.1:3000/health').then(r=>r.text()).then(console.log)"`
+
+### 发一个版本（标准动作）
+
+```bash
+# 1) 版本号必须与 tag 一致，先改再发
+sed -i "s/APP_VERSION = '.*'/APP_VERSION = '1.2.0'/" packages/shared/src/constants.ts
+sed -i 's/"version": ".*"/"version": "1.2.0"/' package.json
+git commit -am "chore(release): 版本号对齐到 1.2.0" && git push
+
+# 2) 打 tag 推上去，剩下全自动
+git tag v1.2.0 && git push origin v1.2.0
+```
+
+流水线四步：**质量门**（typecheck + test + build）→ **构建推镜像**（版本 tag 与 latest 同 digest）→ **部署**（改宿主 `.env` 的 `TAG` 再 `compose up -d`）→ **健康检查**（容器内探活）。
+
+流水线红了的排查顺序（都踩过）：
+
+| 现象 | 原因 | 处置 |
+|---|---|---|
+| step 无日志直接失败 | 卷挂载与 agent 信任卷白名单不完全一致（多写 `:ro` 也会不匹配） | 去掉后缀，与白名单逐字一致 |
+| `invalid reference format` | `.woodpecker.yml` 的全局 `variables` 没注入 step 环境 | 镜像地址写字面量 |
+| 健康检查 502 | step 里 `wget` 继承了 `HTTP_PROXY`，访问内网地址走了代理 | 改 `docker exec <容器> node -e fetch(...)` |
+| GitHub 显示 500 但 Woodpecker 无记录 | GitHub webhook 投递 10s 超时（偶发） | 本地 POST 同一个 `/api/hook` 补发 |
+
+### 新增一个仓库接入 CI（不需要点网页）
+
+`repos.hash` 列就是 `model.Repo.WebhookSecret`。写一行 repo 记录 + 用该字符串签 token 即可：
+
+```python
+import base64, hmac, hashlib, json, secrets
+secret = base64.b32encode(secrets.token_bytes(32)).decode()   # 存进 repos.hash
+# JWT: header {"alg":"HS256","typ":"JWT"}
+#      payload {"forge-id":"1","repo-forge-remote-id":"<GitHub repo id>","type":"hook"}
+#      签名 key = secret 的**原始字符串**（不是 base32 解码后的字节）
+```
+
+然后把 webhook 指到 `https://ci.xl.codec.top/api/hook?access_token=<jwt>`，事件选 push / pull_request / deployment / pull_request_review。
 
 ## 8. 安全边界
 
