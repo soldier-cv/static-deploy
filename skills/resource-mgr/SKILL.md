@@ -1,7 +1,7 @@
 ---
 name: resource-mgr
 description: Use when 发布资源包、管理下载版本或设备拉包更新。
-version: 1.3.0
+version: 1.4.0
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -113,13 +113,30 @@ create_key { slug: "my-app", name: "客厅电视", scope: "download" }
 → { rawKey, keyPrefix, pushEndpoint }
 ```
 
-`rawKey` **只返回这一次**，丢了只能吊销重建。给设备的 URLs：
+`rawKey` **只返回这一次**，丢了只能吊销重建。返回体里直接带面板的公网地址，不用自己拼：
+
+```text
+create_key → {
+  rawKey, baseUrl, baseUrlSource,
+  endpoints: {
+    manifestUrl,          # 检查更新
+    latestUrl,            # 稳定下载
+    versionUrlTemplate    # 精确版本 / 回滚
+  }
+}
+```
+
+给设备的 URLs：
 
 ```text
 GET /r/<rawKey>/manifest/<slot>       # 检查更新（几百字节，可带 If-None-Match 拿 304）
 GET /r/<rawKey>/latest/<slot>         # 稳定下载（写进设备）
-GET /r/<rawKey>/<version>/<file_name> # 精确版本（回滚用）
+GET /r/<rawKey>/<version>/<fileName> # 精确版本（回滚用）
 ```
+
+`baseUrlSource` 是 `config` 说明用的是部署配置的 `PUBLIC_BASE_URL`（正确）；是 `request` 说明没配、回落到了请求地址——**这时候返回的可能是内网地址，不要直接写进固件**。
+
+如果手上没有 rawKey 想先看地址模板，`get_download_url` 只传 `slug` 也能拿到含 `{key}` 占位的地址。
 
 注意：**URL 里没有项目 slug**，slug 只在管理端和 MCP 里用。
 
@@ -237,11 +254,65 @@ GET /r/<rawKey>/<version>/<file_name> # 精确版本（回滚用）
 | key 自动下发 / 轮换 | ❌ | 要设备端实现（用配置包） |
 | 分批推送 / 灰度编排 | ❌ | 项目只「放包」不「推包」；灰度靠 `version_scope` + 多项目 |
 
-## 8. 维护者备注（使用方可以忽略）
+## 8. 部署与初始化（维护者）
 
-这个服务**自己**怎么构建上线（镜像、流水线、部署目录）属于平台自身运维，与「用 resource-mgr 发什么包」是两码事：
-包的版本、槽位、下载 key 全部由本服务的 API/MCP 管理，和 CI 没有任何关系。
-需要改服务本身时看仓库的 `AGENTS.md` 与 `README.md`。
+> 使用方可以忽略这节。包的版本、槽位、下载 key 全部由 API/MCP 管理，与部署形态无关。
+
+### 8.1 部署必配三项
+
+| 变量 | 为什么必须 |
+|---|---|
+| `PUBLIC_BASE_URL` | 设备侧基址。**不配就回落到请求 origin**：内网管理端建 key 会返回 `http://100.64.0.88:13000`，写进固件的公网设备直接拉不到 |
+| `MCP_TOKEN` / `MCP_TOKENS` | 生产启动校验，缺了直接退出 |
+| `TRUST_PROXY=true` | 串在 VPS 反代后面时必须开，否则所有设备挤进一个 IP 限流桶 |
+
+**`PUBLIC_BASE_URL` 必须在 `docker-compose.yml` 的 `environment:` 里显式透传**（`PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}`）。compose 不会自动把 `.env` 里的变量灌进容器，漏了这一行 `GET /api/meta` 会一直返回 `baseUrlSource: "request"`。
+
+验证方法：
+
+```bash
+curl -s http://127.0.0.1:13000/api/meta
+# 期望 {"version":"...","publicBaseUrl":"https://fmgr.xl.codec.top","baseUrlSource":"config"}
+# 若 baseUrlSource 是 "request" → 配置没生效
+```
+
+### 8.2 首次初始化超管
+
+部署完成后 `users` 表为空，网页入口直接显示「初始化超级管理员」表单，由用户自己设用户名密码。**系统只有一个用户**，其余全是 key/token 权限。
+
+| 端点 | 说明 |
+|---|---|
+| `GET /admin/setup/status` | `{ needsSetup, requireToken }`，公开只读 |
+| `POST /admin/setup` | `{ username, password, token? }`，仅 `needsSetup` 为真时可创建，限流 5 次/分钟/IP |
+| 密码要求 | ≥12 位，同时含字母和数字，拒绝常见弱口令（`password`/`123456`/`admin` 等子串）|
+
+**公网部署必须配 `SETUP_TOKEN`**：没有它，「部署完成 → 有人初始化」这段时间里任何能访问的人都可能把自己建成超管。配置后初始化表单会多一个「初始化凭据」输入框。
+
+```bash
+# 生成并写入（600 权限的 .env）
+openssl rand -hex 24
+# 初始化完成后建议删掉这一行并重启容器，彻底关掉这个入口
+```
+
+### 8.3 `setup_completed` 是防重开标记
+
+初始化成功时会在 `settings` 表写 `setup_completed`。此后**即使 `users` 表被清空，`needsSetup` 仍然为 false**，`POST /admin/setup` 返回 409「初始化已完成但用户表为空，需人工恢复」。
+
+这是有意的：否则任何能删库的人都能重新抢注超管。真要重来，必须手工清掉这个标记：
+
+```bash
+sudo docker stop resource-mgr
+sudo sqlite3 /data/resource-mgr/db/app.sqlite \
+  "DELETE FROM users; DELETE FROM sessions; DELETE FROM settings WHERE key='setup_completed';"
+sudo docker start resource-mgr
+curl -s http://127.0.0.1:13000/admin/setup/status   # 期望 {"needsSetup":true,...}
+```
+
+⚠️ 执行到 `needsSetup:true` 那一刻起，任何能访问该端口的人都能创建超管——**只在能立刻完成初始化时做这一步**，做完确认 `needsSetup` 变回 false。
+
+### 8.4 发布流程
+
+镜像由 Woodpecker 构建（tag `vX.Y.Z` → 构建 → 推内网 registry → 部署 → 健康检查），配置真源在宿主 `/opt/deploy/resource-mgr/.env`。改服务本身看仓库 `AGENTS.md` 与 `README.md`。
 
 ## 9. 安全边界（公网暴露后必读）
 
@@ -324,7 +395,7 @@ zerotier-cli listnetworks    # VPS 的 ZeroTier 是否 OK、是否有 100.64.0.0
 | 项 | 值 |
 |---|---|
 | 数据根 | `/data/resource-mgr`（宿主，容器内 `/app/data`） |
-| 数据库 | `data/db/resource-mgr.db`（SQLite WAL） |
+| 数据库 | `data/db/app.sqlite`（SQLite WAL，**文件名是 app.sqlite 不是 resource-mgr.db**） |
 | 包文件 | `data/storage/`（按项目/版本分目录） |
 | 备份 | 停写窗口内 `sqlite3 .backup` + `tar storage`；**库与 storage 必须同版本一起备**，只备库会出现「有记录无文件」 |
 | 重建 | 恢复 `data/` → `docker compose up -d` → `curl /health` 验证 `database: ok` |
