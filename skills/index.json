@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-08 20:58:33",
+  "updated_at": "2026-11-08 22:12:01",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -41,13 +41,13 @@
     {
       "name": "resource-mgr",
       "description": "Use when 发布资源包、管理下载版本或设备拉包更新。",
-      "version": "1.2.0",
-      "updated_at": "2026-11-08 20:58:32",
+      "version": "1.3.0",
+      "updated_at": "2026-11-08 22:12:01",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "3cd1e9bcd3588aa1cea76ffc327478cb00f1cf8c447d2afcf9823d67ae653b74"
+        "SKILL.md": "8d9ab9266d76205090bf69f250c3d7a9589fc85aa725befec966dc64c6d5f877"
       }
     },
     {
