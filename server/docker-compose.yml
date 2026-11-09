@@ -18,7 +18,9 @@ services:
       - ../skills:/srv/skills:ro
       # resource-mgr 技能真源在项目仓库里，../skills/resource-mgr 是指向它的符号链接；
       # 容器内必须能解析到同一个绝对路径，否则 nginx 读不到文件（404）。
-      - /opt/code/resource-mgr/skills/resource-mgr:/opt/code/resource-mgr/skills/resource-mgr:ro
+      # 挂仓库根而不是 skills/resource-mgr：git 操作（rebase/checkout）会删掉并重建
+      # 这个目录，绑定到子目录的 mount 会指向已删除的 inode，表现为容器里目录为空。
+      - /opt/code/resource-mgr:/opt/code/resource-mgr:ro
     depends_on:
       - api
     logging:
