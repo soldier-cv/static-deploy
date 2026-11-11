@@ -1,7 +1,7 @@
 ---
 name: project-repo-standards
-description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件。
-version: 1.2.0
+description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。
+version: 1.4.0
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -20,6 +20,7 @@ metadata:
 在以下任一情形加载本技能：
 
 - 新建项目仓库，要在建代码前定下 README / .gitignore / AGENTS.md / CI 的最小集
+- **按本技能干活前，先跑「更新与版本」一节的版本比对命令**（约 1 秒），落后就先升级再动手
 - 已有仓库缺 CI、CI 写错了、或两套流水线并存互相打架
 - 要判断这个项目该用 Woodpecker（内网部署）还是 GitHub Actions（对外发布）
 - 要给公开项目接 Gitee 镜像，让国内能下载安装包
@@ -76,6 +77,13 @@ print('OK 全部一致' if not bad else 'MISMATCH: '+', '.join(bad))
 - `patch`（1.2.x）：修错别字、补充说明，结论不变，无需重读
 - `minor`（1.x.0）：新增章节或规则，原有结论不变，建议看新增部分
 - `major`（2.0.0）：**推翻既有结论**（如 CI 选型原则变更），必须重读全文
+
+### agent 怎么知道该升级（惰性腿 + 兜底腿）
+
+现状：**没有任何生态能向 agent 推送技能更新**。Claude Code 插件市场是会话启动后随机延迟拉一次 marketplace（运行中会话保持旧版）；skills.sh / `gh skill` 全靠人手动跑 update；裸 md 装完就彻底失联。所以只能自己补两条腿：
+
+1. **惰性腿（agent 自查，零常驻成本）**：agent 按本技能干活前，先跑一次上面的「检查是否有新版」命令（约 1 秒）。版本落后 → 先按升级命令更新，再执行任务。这条写进了本技能的 When to Use，加载即生效。
+2. **兜底腿（巡检 cron，静默契约）**：各 profile 配每日低频巡检，比对本地已装技能文件的 sha256 与 index.json 中的 sha256，**不一致才发卡，一致 stdout 留空**。防的是「agent 忘了跑惰性腿」。
 
 **维护约定**：`version` 只写在 SKILL.md 的 frontmatter，index.json 里的 version/sha256/updated_at 全部由 `skills/sync_index.py` 从磁盘提取，**不要手改 index.json**。
 
@@ -376,13 +384,42 @@ jobs:
 - 镜像 tag 改动前确认 CI 与部署端支持新格式（`v1.3.8` vs `sha-abc123`）。
 - **重建镜像前先给旧镜像打回滚 tag**（containerd 会 GC 未打 tag 的旧镜像，顺序反了就回滚不了）。
 
-### 7.3 发版
+### 7.3 版本纪律（SemVer：什么时候发大版本、什么时候发小版本）
+
+版本号跟着**发布动作**走，不跟着提交走——攒一批相关改动一次发布，禁止每个 commit 都 bump 版本。
+
+| 变更类型 | 版本 | 判据 |
+|---|---|---|
+| 破坏性变更 | **major** | 对外接口/数据模型/配置格式/CLI 参数不兼容、删功能、部署方式变更需人工迁移 |
+| 向后兼容新能力 | **minor** | 新接口/新端点/新文档章节；依赖大版本升级但行为兼容 |
+| 修复与内部改动 | **patch** | bug 修复、文案、内部重构、依赖小版本升级 |
+
+- 0.x 阶段接口允许不稳定，minor 即可含破坏性，但 CHANGELOG 里必须标 `BREAKING`。
+- **禁止用 patch 夹带破坏性变更**——消费方按 patch 自动升级会直接挂。
+- 破坏性变更发布前先发预告版（如 `-rc.1`）或至少提前在 CHANGELOG 的 Unreleased 段标注。
+- tag 命名 `vX.Y.Z`，**不带日期后缀**；镜像 latest 仅作便捷别名，部署引用固定版本 tag。
+
+### 7.4 git 提交规范（Conventional Commits）
+
+- 格式：`<type>(<scope>): 中文描述`。type 取 `feat/fix/docs/refactor/test/chore/ci`。
+- 破坏性变更：`feat!:` 或 body 里写 `BREAKING CHANGE: <说明与迁移方式>`。
+- **一次提交只干一件事**；技能/文档改动与对应代码改动放**同一个提交**（回滚时不留半截）。
+- 提交信息写「为什么」，diff 已经写了「是什么」。
+
+### 7.5 CHANGELOG 规范（Keep a Changelog）
+
+- 人工维护，不用工具自动生成 commit 罗列——条目面向使用者写**行为变化**，不写内部过程。
+- 顶部常设 `## Unreleased` 段收集改动，发版时改成 `## vX.Y.Z - YYYY-MM-DD`。
+- 分类用 `Added / Changed / Deprecated / Removed / Fixed / Security`；破坏性条目置顶并加 `**BREAKING**` 前缀，附迁移说明。
+- 无外部消费者的内部项目可简化为「版本号 + 日期 + 一段话」，但**不许只有 tag 没有 CHANGELOG**。
+
+### 7.6 发版清单
 
 - 语义化版本 + tag（`vX.Y.Z`）+ CHANGELOG 条目，缺一不可。
 - 发版前确认三处回滚点：代码 commit、镜像 tag、GitOps manifest。
 - 发版后验证**外部可用入口**（NodePort/域名），不要只看 pod Ready。
 
-### 7.4 与上游的关系要显式决策
+### 7.7 与上游的关系要显式决策
 
 fork 或引用开源项目时，把「跟 / 不跟 / 手动跟」写进 AGENTS.md，否则 agent 每次自作主张。
 
@@ -418,3 +455,35 @@ git ls-files | grep -E '\.env$|\.pem$|\.key$' && echo '❌ 凭据入库' || echo
 
 - `references/ci-coexistence.md` —— Woodpecker 与 GitHub Actions 共存时怎么分工（按交付物，不是按项目）
 - `references/upgrade-by-delivery-type.md` —— Web / 桌面 / 安卓 / 固件 / 扩展 五种形态的升级机制与必备闸门
+
+## 12. 技能文档随仓库走（skills/ 真源 + 分发链路）
+
+给外部 agent 用的技能说明书，不要只活在某个 agent 的 profile 里：**真源放进项目仓库**，代码改了就在同一个提交里改技能，分发链路指过去。
+
+```text
+<repo>/skills/<name>/SKILL.md                         ← 唯一真源，跟代码一起 review / 回滚
+/opt/code/static-deploy/skills/<name>    → 符号链接   ← 对外分发（git 里存 120000）
+~/.hermes/profiles/<p>/skills/.../<name> → 同一链接   ← 本机 agent 读到的就是真源
+```
+
+四步落地：
+
+1. 真源放 `<repo>/skills/<name>/SKILL.md`，frontmatter 写 `version`；同时在该仓库 `AGENTS.md` 加一条「改接口 / 数据模型 / 部署方式时，同一提交里改技能」。
+2. 分发目录与 profile 目录都用 `ln -s` 指过去。**容器必须能解析同一个绝对路径**——nginx 的 `alias` 会跟随符号链接，但目标不在容器里就一律 404，所以给容器补一条**同路径**的 `:ro` bind mount。
+3. `index.json`（version / sha256 / files）由分发仓库的 `sync_index.py` 从磁盘重算，**不要手改**；重算前先 `--check`，只有真不一致才写——否则每次都改顶层 `updated_at`，每次提交都产生噪音 diff。
+4. 自动触发两条腿：仓库 `.githooks/post-commit` + `post-merge`（需 `git config core.hooksPath .githooks` 才生效），加宿主 systemd `path` 单元监听该文件（在服务器上直接编辑也能同步）。两处可能同时触发，脚本里用 `flock` 串行；推送失败只告警、不阻塞提交。
+
+验收三件套（三处 sha256 必须一致）：
+
+```bash
+sha256sum <repo>/skills/<name>/SKILL.md
+curl -s http://<dist>/<name>/SKILL.md | sha256sum
+curl -s http://<dist>/index.json | python3 -c "import json,sys;s=[x for x in json.load(sys.stdin)['skills'] if x['name']=='<name>'][0];print(s['version'],s['sha256']['SKILL.md'])"
+```
+
+坑：
+
+- **bind mount 挂子目录会被 git 操作打穿**：`rebase` / `checkout` 若删掉并重建该子目录，容器里的 mount 指向已删除的 inode，容器内目录变空、请求静默 404（重启容器才恢复）。挂**仓库根**或不会被整体删除的父目录。
+- **改技能前先 `git fetch`，看远端是否领先**：本机工作区可能落后好几个提交（对方在别处开发完推上来了），直接 push 会被 non-fast-forward 拒掉；先 rebase 再继续，不要把本地当成最新。
+- **技能内容要跟当前代码核对**（README + 路由/接口文件 + 实际 curl），不要照抄上一版；上游新增能力时按 minor 升版，并在「常见坑」表里补一条。
+- 分发目录只放 `SKILL.md` 与 `references/*.md`：nginx 白名单只放行这两类，别指望从分发链路取脚本或其它文件。
