@@ -1,14 +1,14 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-11 22:10:03",
+  "updated_at": "2026-11-11 22:11:55",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
     {
       "name": "desktop-release-ci-playbook",
       "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
-      "version": "1.0.0",
-      "updated_at": "2026-10-22 10:38:29",
+      "version": "1.1.0",
+      "updated_at": "2026-11-11 22:11:55",
       "files": [
         "SKILL.md",
         "references/gitee-mirror.md",
@@ -16,7 +16,7 @@
         "references/woodpecker-compose.md"
       ],
       "sha256": {
-        "SKILL.md": "da59b2bc6115a7b70cfd109029fce2d667e0f33a43ba3ef7f3d35826b4ce038a",
+        "SKILL.md": "ea1367fc7b59e53b88f5ebc94cf2cb7d843d95973ece23942a2eb4d489527f77",
         "references/gitee-mirror.md": "f801241544ababbd25b11e7529675dc9b3b649537f3e022f82dd7963a61038a8",
         "references/github-actions.md": "6e851cb1ba1ec643b8d37e580aa7b6f73202720cf7f2bd20f7c5ac593b47287d",
         "references/woodpecker-compose.md": "7a8f47483a36daad426127e77d1b9966b3ef58a20251a2662cd49843cd9bbd57"

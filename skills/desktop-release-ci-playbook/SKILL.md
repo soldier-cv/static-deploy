@@ -1,7 +1,7 @@
 ---
 name: desktop-release-ci-playbook
 description: Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。
-version: 1.0.0
+version: 1.1.0
 author: 程序员（coding）
 license: MIT
 platforms: [linux, macos, windows]
@@ -79,6 +79,17 @@ gitee-release # 等以上全完 → 推 tag + 搬附件到 Gitee + 校验下载�
    因此 `latest.json` 的 macOS `url` 也必须指向 `.app.tar.gz`，dmg 只留给人手动下载。
 3. **`.sig` 从 Release 回取，不要跨 job 传文件**；取不到就 `exit 1`——发一个"看起来有新版但装不上"的
    `latest.json` 比不发更糟。
+
+## 骨架二之后：移动端 APK 的签名固化（同一套「不可糊弄」原则）
+
+桌面端的签名错了客户端验签失败，移动端的签名错了**用户根本装不上**：Android 只允许同证书覆盖安装，
+跨签名升级必 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。与 Tauri 那条「绝不为了流水线过而换钥」同理，
+这里最常见的坑是**反向的**：Gradle 在找不到 release keystore 时**静默回退 debug 签名**，
+而 CI runner 的 debug keystore 每轮现生成 → 每发一版换一次证书，用户在下一版才发现「更新失败」。
+
+发布路径上必须有：密钥落位步骤（缺项即失败）→ 配置期硬失败开关 → 产物 `-debugkey` 检查 →
+`apksigner --print-certs` 指纹强校验。完整配方与逐版取证、交付口径见 `android-build-env`
+的「发布链路」与 `android-build-env` 的 `references/apk-signature-triage.md`（取指纹只用 apksigner，别手写解析器写进汇报）。
 
 ## 骨架三：GitHub → Gitee 双通道（国内可用性）
 
