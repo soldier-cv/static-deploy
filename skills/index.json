@@ -1,9 +1,25 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 19:56:19",
+  "updated_at": "2026-11-12 20:02:58",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
+    {
+      "name": "api-testing-toolkit",
+      "description": "Use when 前端未就绪时要由 AI 驱动接口测试：为项目初始化接口测试包（tools/api-testing 脚手架、鉴权链、docs 参考），或在已初始化项目里跑回归/冒烟/story 测试、造数验证、探索新接口、缺陷定位与修复闭环。触发词：接口测试、测试包初始化、跑回归、跑冒烟、story 测试、造数验证、tools/api-testing。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 20:02:45",
+      "files": [
+        "SKILL.md",
+        "references/scaffold-mcp-server.md",
+        "references/scaffold-project.md"
+      ],
+      "sha256": {
+        "SKILL.md": "dd9e4f6dbea5188461736f6e2b47504693869a13ee29fa0bdbe6f697c85a2bcc",
+        "references/scaffold-mcp-server.md": "f20e8955207065557ce56af2754cb092239432148ca41b8262785267a060b66b",
+        "references/scaffold-project.md": "1afa9167e64e095850d88d4e83015f9304d81182422d5082872292bf6f5c66d2"
+      }
+    },
     {
       "name": "desktop-release-ci-playbook",
       "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
@@ -35,6 +51,24 @@
       }
     },
     {
+      "name": "hearthbox",
+      "description": "Hearthbox（炉边）自制游戏平台的全部工作：写游戏、设计玩法、改平台本体。当用户提到炉边、hearthbox、要写一个能上这个平台的游戏、要给游戏加金手指/设置项/成就、要改平台的运行时或壳、或者问这个平台怎么用、游戏怎么上架时使用。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 20:02:46",
+      "files": [
+        "SKILL.md",
+        "references/game-design.md",
+        "references/game-dev.md",
+        "references/platform.md"
+      ],
+      "sha256": {
+        "SKILL.md": "0e0c65752e098f99f66deb25a5275008ea0af59d9b94fbdaad3d978d43805ca3",
+        "references/game-design.md": "a487b3d530875fa8719826dbf2994dc540633e173ec6daa7496b78c9ac077079",
+        "references/game-dev.md": "5e04a005064df3f38d47a7f2c88fa57d8a6b5c9774975661c6cd6a2f22d48d05",
+        "references/platform.md": "5b1310cffb69067354da0580857f48eacada344bb9a20f0f8518e47900e4a0ab"
+      }
+    },
+    {
       "name": "project-repo-standards",
       "description": "项目仓库初始化规范：文件用途判据、CI 选型（Woodpecker/GHA 共存规则）、AGENTS.md 写法、按交付形态分层的升级机制（Web/桌面/安卓/固件/扩展）、Gitee 镜像、脚本经验",
       "version": "1.5.0",
@@ -60,6 +94,50 @@
       ],
       "sha256": {
         "SKILL.md": "ae3f9ba36edd89fb6ff68f809ac841fe0f632ba6e4cd8e2993a10279f68274bb"
+      }
+    },
+    {
+      "name": "selfapp",
+      "description": "Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 20:02:47",
+      "files": [
+        "SKILL.md",
+        "references/database-patterns.md",
+        "references/env-schema.md",
+        "references/idor-guard.md",
+        "references/init-selfapp.md",
+        "references/logger-middleware.md",
+        "references/sliding-rate-limiter.md",
+        "references/templates.md"
+      ],
+      "sha256": {
+        "SKILL.md": "61dd9ce4f2c56e40f4f25b4de59be44c966dec1f86a418ba6732ad220d9d7f87",
+        "references/database-patterns.md": "d95ef172dbdc0bc80955a5ccbaf81f6f86f62bca87da710eb9ab78cc79eecaf0",
+        "references/env-schema.md": "1559a4ca50248f01aa776a078726e2a7fdeee6e22bb17016790009ec32ee137f",
+        "references/idor-guard.md": "f26113e09c0b612b750689ce609f17add0c58061b4b882065816d7ddb88eaae4",
+        "references/init-selfapp.md": "97eb1b45d0b89e948b80058012791068e2ee6d48c4864ee139f97e38f230d48a",
+        "references/logger-middleware.md": "77726609bb1ec2ec05fc1c1101c545f594f891c9395e9dbbb9a8f00a38b736eb",
+        "references/sliding-rate-limiter.md": "e666a4663238df6c5cda446b5ad61d0fba2811d8c78990de9bee9ae3ef014bf1",
+        "references/templates.md": "4e0759445074d9273f2b4b3d214e8db50f8471021e7839d396d6fad3d3e0db75"
+      }
+    },
+    {
+      "name": "server-88-deploy",
+      "description": "Standard operating procedure and automation for deploying services on LAN server 88 (100.64.0.88). Use whenever deploying, updating, inspecting, or managing containers or services on server 88, or working with /opt/deploy and /data paths.",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 20:02:48",
+      "files": [
+        "SKILL.md",
+        "references/compose-template.md",
+        "references/deploy-helper.md",
+        "references/operations-template.md"
+      ],
+      "sha256": {
+        "SKILL.md": "9e922fecf210a4747615f12983521f25d2cffeed6513692df5384e4db2d2e5a9",
+        "references/compose-template.md": "9cc30440c8af9ffd2f3ebad090995b9d68bf8fe017ef9d1160deacbd1faac0a4",
+        "references/deploy-helper.md": "8a5ce66b9914ee0fd90c84a3eec65a600be989a6020be1fcde07f7ba317affd6",
+        "references/operations-template.md": "a045344746f877537b54198482bc7161f6dfd97d9f1629d9c647fe30409ed3b5"
       }
     },
     {
@@ -102,6 +180,48 @@
         "references/config-snippet.md": "f6063fa063d7c53fd3f3e0873f8f38bdf6dbb27d1f4c8f189ce650356abfd52a",
         "references/publish-patterns.md": "f69f9114911fc19e932f7d5ee1f7087bd984081402e539d3baa4b618986058ff",
         "references/troubleshooting.md": "6306396f6ed7caa5bb0ca2f5944a40115ad37bc60206d41fc4de2e60610f7aae"
+      }
+    },
+    {
+      "name": "ui-diff",
+      "description": "Use when 需要跨平台 UI 截图比对：抓取预期与实际画面、逐页分类差异并给出验收结论，覆盖桌面 Web/Tauri、Android 应用与微信小程序。触发词：screenshot compare、prototype vs app、UI acceptance、visual regression、页面验收、Android/小程序页面对比、/ui-diff。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 20:02:49",
+      "files": [
+        "SKILL.md",
+        "references/capture-examples.md",
+        "references/capture-web.md",
+        "references/compare-prompt.md",
+        "references/platforms.md",
+        "references/report-template.md",
+        "references/severity-rubric.md"
+      ],
+      "sha256": {
+        "SKILL.md": "770d1ef892fd7b49cc1c35ec0ebe4554a43c83a5af1f44c50be19462c1ffd611",
+        "references/capture-examples.md": "4691ae34679ef2bc1f5768b0bd6c3a03df69873186b5e37d0206ea9bec9c303c",
+        "references/capture-web.md": "3aac48b34f55104590b55f6d76fadf2ad485746530bf4360c39a444c87792a8b",
+        "references/compare-prompt.md": "07b9d605a4af1304dbd189a6fcd20ad701d372ba5b24a5ef6c74e6a30066baff",
+        "references/platforms.md": "2dffc139e15adb86588c06fbdd02b8fdcb9255641ebb39e0cc94291f9dc54825",
+        "references/report-template.md": "9bbe8ae193dea9bea031dd7527e23b69df404ba6dcaa75a1affedf514402547b",
+        "references/severity-rubric.md": "c9456e97f0b3bd13814b6d95623e6f6804b713c3b19f8dfb733b84d44bf3ddf0"
+      }
+    },
+    {
+      "name": "webapp-testing",
+      "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 20:02:50",
+      "files": [
+        "SKILL.md",
+        "references/examples.md",
+        "references/license.md",
+        "references/with-server.md"
+      ],
+      "sha256": {
+        "SKILL.md": "d6e535e2d83d152d9786a46300c514a6011e3202861e17d7b7f1fe8c360a2a17",
+        "references/examples.md": "0c2ad883faff4d316dd9330358adf7284202f6423f676077e32acfe8f6d944c5",
+        "references/license.md": "d314487ae6398b2c4df0aa207e3b4432817da511d239d5189d71d4acaa691c22",
+        "references/with-server.md": "579da75abb0baf7dfb1207f8393a3f839f827a1cd1703e46ab023815f7cd96ac"
       }
     }
   ]
