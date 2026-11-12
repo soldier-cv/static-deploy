@@ -96,9 +96,8 @@ def main():
         item = collect(path)
         if not item:
             continue
-        item["description"] = old.get(item["name"], "")
-        if not item["description"]:
-            item["description"] = read_frontmatter(os.path.join(path, "SKILL.md")).get("description", "")
+        fm_desc = read_frontmatter(os.path.join(path, "SKILL.md")).get("description", "")
+        item["description"] = fm_desc or old.get(item["name"], "")
         # 保持字段顺序好读
         skills.append({
             "name": item["name"],

@@ -2,9 +2,22 @@
 name: ui-diff
 description: Use when 需要跨平台 UI 截图比对：抓取预期与实际画面、逐页分类差异并给出验收结论，覆盖桌面 Web/Tauri、Android 应用与微信小程序。触发词：screenshot compare、prototype vs app、UI acceptance、visual regression、页面验收、Android/小程序页面对比、/ui-diff。
 version: 1.0.0
+author: Hermes coding agent
+license: MIT
+metadata:
+  hermes:
+    tags: [ui, diff, screenshot, visual-regression, acceptance]
+    related_skills: [webapp-testing, frontend-review, static-deploy-mcp]
 ---
 
 # ui-diff — Cross-platform UI screenshot verify
+
+> 版本记录：1.0.0 首发跨平台截图比对与验收标准，互链 UI 簇技能（webapp-testing、frontend-review）。
+
+> **相关技能**：
+> - [webapp-testing](../webapp-testing/SKILL.md) — 本地 Web 应用 Playwright 功能与交互自动化测试、服务生命周期管理
+> - [frontend-review](../frontend-review/SKILL.md) — 前端交付审查（信息架构、入口冗余、文案纪律与布局走查）
+> - [static-deploy-mcp](../static-deploy-mcp/SKILL.md) — 原型与截图静态托管分发，生成手机可访问链接
 
 Verify **one screen at a time**: capture expected + actual → compare → severity report → fix only in-scope gaps → re-capture.
 
@@ -169,12 +182,18 @@ Do not require these files; cross-platform runs often have none.
 
 > 本技能的抓图脚本与模板已转写为 Markdown；`capture-web.js` 等按节还原后可直接执行。
 
-## 更新与升级（统一走 skillctl）
+## 版本与升级（统一走 skillctl）
 
-更新源：`http://100.64.0.88:8088/.well-known/skills/index.json`
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
 
 ```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
 ./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后升级（逐文件 sha256 校验）
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
 ```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

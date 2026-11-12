@@ -1,10 +1,23 @@
 ---
 name: webapp-testing
-description: Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.
+description: Use when 需要对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试：用 Python Playwright 编写自动化脚本、驱动多服务生命周期（with_server.py）、捕获页面状态与浏览器日志。触发词：webapp-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。
 version: 1.0.0
+author: Hermes coding agent
+license: Apache-2.0
+metadata:
+  hermes:
+    tags: [playwright, e2e, testing, browser-automation, webapp]
+    related_skills: [ui-diff, frontend-review, api-testing-toolkit]
 ---
 
 # Web Application Testing
+
+> 版本记录：1.0.0 首发本地 Web 应用 Playwright 交互与功能测试工具包，补齐标准 frontmatter、UI 簇互链与升级段。
+
+> **相关技能**：
+> - [ui-diff](../ui-diff/SKILL.md) — 跨平台 UI 截图比对与视觉回归验收
+> - [frontend-review](../frontend-review/SKILL.md) — 前端交付审查（信息架构、入口冗余、文案纪律）
+> - [api-testing-toolkit](../api-testing-toolkit/SKILL.md) — 纯接口层面自动化故事流测试
 
 To test local web applications, write native Python Playwright scripts.
 
@@ -107,12 +120,18 @@ with sync_playwright() as p:
 
 > 本技能原带 Python 脚本与示例，已转写为 Markdown；许可证全文见 `references/license.md`。
 
-## 更新与升级（统一走 skillctl）
+## 版本与升级（统一走 skillctl）
 
-更新源：`http://100.64.0.88:8088/.well-known/skills/index.json`
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
 
 ```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
 ./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后升级（逐文件 sha256 校验）
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
 ```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

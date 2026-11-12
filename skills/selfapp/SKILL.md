@@ -1,10 +1,23 @@
 ---
 name: selfapp
-description: Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。
-version: 1.0.0
+description: Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。触发词：selfapp、自研应用、全栈架构、Hono、Drizzle、IDOR、滑动窗口限频、协议合规、feature-hub。
+version: 1.1.0
+author: Hermes coding agent
+license: MIT
+metadata:
+  hermes:
+    tags: [fullstack, selfapp, hono, drizzle, postgres, redis, uni-app, multi-tenancy, idor]
+    related_skills: [api-testing-toolkit, project-repo-standards, ui-diff]
 ---
 
 # Self-App 全栈自研应用开发与架构设计指南
+
+> 版本记录：1.1.0 整合去重：接口测试通用脚手架下沉至 api-testing-toolkit，保留 Self-App 独有测试用例（双 Token、多租户 IDOR、协议合规签署）；补齐 frontmatter 与标准升级段。
+
+> **相关技能**：
+> - [api-testing-toolkit](../api-testing-toolkit/SKILL.md) — 通用接口测试工具包、tools/api-testing 脚手架与 MCP Server 完整实现
+> - [project-repo-standards](../project-repo-standards/SKILL.md) — 仓库初始化、CI/CD 选型与版本纪律
+> - [ui-diff](../ui-diff/SKILL.md) — 客户端多端还原后的截图比对与验收
 
 本指南汇聚了「往来 · WangLai」与「幼安宝 · BabyGo」两大产品的最佳实战经验，是开发所有现代化自研独立全栈应用（Self-App）的**统一工程与架构真理基准**。
 
@@ -86,7 +99,7 @@ flowchart LR
 * **启动期强阻断**：利用 `zod` 在模块加载时执行解析，类型转换（如数字、布尔值）并在缺配置时打印清晰指引并立即 `process.exit(1)`。
 
 ### 3.2 标准模板
-参考实现见 [`references/env-schema.ts`](./references/env-schema.md)。
+参考实现见 [`references/env-schema.md`](references/env-schema.md)。
 
 ---
 
@@ -103,7 +116,7 @@ flowchart LR
 5. **金额单位统一为分**：货币金额一律采用整数 `integer`，单位为**分**（>=0），前端负责格式化为元。
 
 ### 4.2 标准 Drizzle ORM 模板
-参考实现见 [`references/database-patterns.ts`](./references/database-patterns.md)。
+参考实现见 [`references/database-patterns.md`](references/database-patterns.md)。
 
 ---
 
@@ -125,8 +138,8 @@ flowchart LR
 └─────────────────────────┴────────────────────────────────────────────────────────┘
 ```
 
-* 守卫与鉴权实现见 [`references/idor-guard.ts`](./references/idor-guard.md)；
-* 滑动窗口限频实现见 [`references/sliding-rate-limiter.ts`](./references/sliding-rate-limiter.md)。
+* 守卫与鉴权实现见 [`references/idor-guard.md`](references/idor-guard.md)；
+* 滑动窗口限频实现见 [`references/sliding-rate-limiter.md`](references/sliding-rate-limiter.md)。
 
 ---
 
@@ -173,10 +186,15 @@ flowchart LR
 在后端路由和数据表迁移完成后，必须触发接口测试闭环，**严禁在未经自动化回归前启动前端开发**。
 
 ### 7.2 测试架构与能力
-* **专项技能联动**：深度调用 `api-testing-toolkit` 技能，通过 `tools/api-testing` 实现全自动闭环；
-* **测试用例故事流（Stories）**：模拟真实用户使用轨迹（注册 -> 签署协议 -> 创建租户 -> 业务增删改查 -> 越权拦截验证 -> 注销）；
-* **数据库断言与查库校验**：不只断言 HTTP 返回值，直连 Postgres 校验落库字段、时区与软删除快照；
-* **缺陷自动记录与闭环**：失败用例自动写入 `defects.json`，修复后定点回归（`npm run test -- --story X-01`）。
+* **专项技能联动**：通用 `tools/api-testing` 脚手架目录、MCP Server 完整实现、测试环境配置与用例生命周期管理，统一由 [api-testing-toolkit](../api-testing-toolkit/SKILL.md) 驱动；
+* **Self-App 场景特有校验重点**：
+  1. **微信授权登录 Mock 与双 Token 轮转**：模拟用户微信登录拿 code，获取并断言短效 Access Token 与长效 Refresh Token 轮转机制；
+  2. **多租户 IDOR 严格防越权**：断言请求未带 `X-Tenant-Id` / `X-Family-Id` 返回 400，跨租户注入非法 ID 拦截返回 403 `NOT_TENANT_MEMBER`；
+  3. **协议合规与双重留痕**：轻量心跳 `GET /api/app/config` 获取协议字典，POST 签署日志后直连数据库断言 `user_consents` 表写入状态、版本、IP 与时间戳；
+  4. **数据库落盘断言**：直连 PostgreSQL 断言 `tenant_id`、时区 `timestamptz`、软删除 `deleted=0` 与金额分单位整数；
+* **用例执行与闭环**：
+  - 完整套件：通过 `cd tools/api-testing/mcp-server && npm run test` 执行 regression 故事流，失败写入 `defects.json`；
+  - 极简执行：若无需 MCP Server，可复用 [references/templates.md](references/templates.md) 中的轻量 `runner.mjs` 与 `stories.example.js` 直接执行。
 
 ---
 
@@ -241,7 +259,7 @@ flowchart LR
 * **Promtail / Loki 结构化输出**：所有日志必须输出为单行 JSON，强制包含 `timestamp`, `level`, `requestId`, `userId`, `tenantId`, `path`, `status`, `durationMs`；
 * **敏感参数自动脱敏**：密码、token、短信验证码等敏感字段必须在日志中自动替换为 `***`；
 * **慢响应告警**：请求耗时超过 200ms 自动标记为 `WARN` 慢日志。
-* 参考实现见 [`references/logger-middleware.ts`](./references/logger-middleware.md)。
+* 参考实现见 [`references/logger-middleware.md`](references/logger-middleware.md)。
 
 ### 11.2 Prometheus 指标埋点
 * 暴露标准 `/metrics` 端点；
@@ -278,36 +296,24 @@ node <skill-path>/scripts/init-selfapp.mjs  # 脚本内容见 references/init-se
 | `references/sliding-rate-limiter.ts` | `references/sliding-rate-limiter.md`（`## references/sliding-rate-limiter.ts` 节） |
 | `references/logger-middleware.ts` | `references/logger-middleware.md`（`## references/logger-middleware.ts` 节） |
 | `scripts/init-selfapp.mjs` | `references/init-selfapp.md`（`## scripts/init-selfapp.mjs` 节） |
-| `templates/api-testing/README.md` | `references/templates.md`（`## templates/api-testing/README.md` 节） |
 | `templates/api-testing/package.json` | `references/templates.md`（`## templates/api-testing/package.json` 节） |
 | `templates/api-testing/runner.mjs` | `references/templates.md`（`## templates/api-testing/runner.mjs` 节） |
 | `templates/api-testing/stories.example.js` | `references/templates.md`（`## templates/api-testing/stories.example.js` 节） |
-| `templates/api-testing/defects.json` | `references/templates.md`（`## templates/api-testing/defects.json` 节） |
-| `templates/api-testing/cases/README.md` | `references/templates.md`（`## templates/api-testing/cases/README.md` 节） |
-| `templates/api-testing/cases/_template/stories.js` | `references/templates.md`（`## templates/api-testing/cases/_template/stories.js` 节） |
-| `templates/api-testing/cases/_template/story.md` | `references/templates.md`（`## templates/api-testing/cases/_template/story.md` 节） |
-| `templates/api-testing/docs/api-reference.template.md` | `references/templates.md`（`## templates/api-testing/docs/api-reference.template.md` 节） |
-| `templates/api-testing/docs/db-reference.template.md` | `references/templates.md`（`## templates/api-testing/docs/db-reference.template.md` 节） |
-| `templates/api-testing/mcp-server/env.example.json` | `references/templates.md`（`## templates/api-testing/mcp-server/env.example.json` 节） |
-| `templates/api-testing/mcp-server/package.json` | `references/templates.md`（`## templates/api-testing/mcp-server/package.json` 节） |
-| `templates/api-testing/mcp-server/src/index.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/index.js` 节） |
-| `templates/api-testing/mcp-server/src/run-tests.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/run-tests.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/auth.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/auth.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/config.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/config.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/db.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/db.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/harness.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/harness.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/http.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/http.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/log.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/log.js` 节） |
-| `templates/api-testing/mcp-server/src/lib/report.js` | `references/templates.md`（`## templates/api-testing/mcp-server/src/lib/report.js` 节） |
 
-> 本技能原带 .ts 参考实现与初始化脚本，已转写为 Markdown；按 `## 路径` 还原后即可直接使用。
+> 本技能原带 .ts 参考实现、初始化脚本与 Self-App 特有测试模板，已转写为 Markdown；按 `## 路径` 还原后即可直接使用。通用 `tools/api-testing` 脚手架与 MCP Server 实现见 [api-testing-toolkit](../api-testing-toolkit/SKILL.md)。
 
-## 更新与升级（统一走 skillctl）
+## 版本与升级（统一走 skillctl）
 
-更新源：`http://100.64.0.88:8088/.well-known/skills/index.json`
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
 
 ```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
 ./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后升级（逐文件 sha256 校验）
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
 ```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

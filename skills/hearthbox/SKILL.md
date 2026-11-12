@@ -1,10 +1,23 @@
 ---
 name: hearthbox
-description: Hearthbox（炉边）自制游戏平台的全部工作：写游戏、设计玩法、改平台本体。当用户提到炉边、hearthbox、要写一个能上这个平台的游戏、要给游戏加金手指/设置项/成就、要改平台的运行时或壳、或者问这个平台怎么用、游戏怎么上架时使用。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。
+description: Use when 进行 Hearthbox（炉边）自制游戏平台的全部开发工作：写游戏、设计玩法、改平台本体、配置金手指/设置项/成就、调试运行时与货架。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。
 version: 1.0.0
+author: Hermes coding agent
+license: MIT
+metadata:
+  hermes:
+    tags: [game, hearthbox, sdk, defineGame, cheats, runtime]
+    related_skills: [ui-diff, webapp-testing, project-repo-standards]
 ---
 
 # Hearthbox（炉边）
+
+> 版本记录：1.0.0 首发 Hearthbox 平台开发与游戏接入规范，补齐标准 frontmatter、相关技能与升级段。
+
+> **相关技能**：
+> - [ui-diff](../ui-diff/SKILL.md) — 游戏与平台界面跨端截图比对验收
+> - [webapp-testing](../webapp-testing/SKILL.md) — Web 运行时 Playwright 交互与自动化测试
+> - [project-repo-standards](../project-repo-standards/SKILL.md) — 项目工程结构与代码规范
 
 一个手柄优先的自制游戏平台：壳 + 货架 + 游戏包。游戏只针对 SDK 写，不针对操作系统。
 
@@ -22,7 +35,7 @@ version: 1.0.0
 | 定美术风格、做素材 | `game-art` | 视觉风格、素材管线、动画 |
 | 做音效与音乐 | `game-audio` | 音效设计、自适应音频 |
 | 不确定该用哪套 | `game-development` | 它是个编排技能，会路由到上面几个 |
-| 验收要截图对比 | `playwright-skill` 或 `ui-diff` | 自动截图、视觉回归 |
+| 验收要截图对比/交互测试 | `ui-diff` / `webapp-testing` | 自动截图、视觉回归与浏览器交互 |
 | 设计模块边界 | `codebase-design` | 深模块、接口放置 |
 
 **规则**：
@@ -125,12 +138,18 @@ hearthbox-projects/
 
 **什么时候读**：用户要改运行时、SDK 契约、壳页面，或者排查平台侧的问题。
 
-## 更新与升级（统一走 skillctl）
+## 版本与升级（统一走 skillctl）
 
-更新源：`http://100.64.0.88:8088/.well-known/skills/index.json`
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
 
 ```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
 ./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后升级（逐文件 sha256 校验）
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
 ```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

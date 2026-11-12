@@ -2,9 +2,22 @@
 name: api-testing-toolkit
 description: Use when 前端未就绪时要由 AI 驱动接口测试：为项目初始化接口测试包（tools/api-testing 脚手架、鉴权链、docs 参考），或在已初始化项目里跑回归/冒烟/story 测试、造数验证、探索新接口、缺陷定位与修复闭环。触发词：接口测试、测试包初始化、跑回归、跑冒烟、story 测试、造数验证、tools/api-testing。
 version: 1.0.0
+author: Hermes coding agent
+license: MIT
+metadata:
+  hermes:
+    tags: [api-testing, mcp, story-testing, automated-testing, regression]
+    related_skills: [selfapp, webapp-testing, project-repo-standards]
 ---
 
 # 接口测试工具包 (api-testing-toolkit)
+
+> 版本记录：1.0.0 首发通用接口测试工具包（脚手架、MCP Server、Story Runner），与 selfapp 解耦共享通用测试资产。
+
+> **相关技能**：
+> - [selfapp](../selfapp/SKILL.md) — 自研全栈应用开发指南，包含 Self-App 场景特有的多租户 IDOR、微信登录与协议签署测试用例
+> - [webapp-testing](../webapp-testing/SKILL.md) — 前端页面就绪后的 Playwright 浏览器交互与功能测试
+> - [project-repo-standards](../project-repo-standards/SKILL.md) — 项目工程结构与 CI 规范
 
 > 思想: 无前端时, 由 AI 按 story 驱动, 完成「登录 → 调接口 → 查库验证 → 造数 → 报告」闭环。
 > 实现: 项目内 `tools/api-testing`(MCP server + story runner + docs + cases), 由本技能脚手架初始化。
@@ -136,12 +149,18 @@ export const stories = [
 
 > 本技能不含可执行文件：脚手架各文件以 Markdown 形式随包，落地时按 `## 路径` 写回磁盘。
 
-## 更新与升级（统一走 skillctl）
+## 版本与升级（统一走 skillctl）
 
-更新源：`http://100.64.0.88:8088/.well-known/skills/index.json`
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
 
 ```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
 ./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后升级（逐文件 sha256 校验）
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
 ```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

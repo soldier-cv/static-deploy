@@ -1,10 +1,23 @@
 ---
 name: server-88-deploy
-description: Standard operating procedure and automation for deploying services on LAN server 88 (100.64.0.88). Use whenever deploying, updating, inspecting, or managing containers or services on server 88, or working with /opt/deploy and /data paths.
-version: 1.0.0
+description: Use when deploying, updating, inspecting, or managing Docker containers or services on LAN server 88 (100.64.0.88), or working with /opt/deploy and /data paths. 触发词：server 88, 100.64.0.88, docker compose deploy, deploy-helper, 88部署, 容器运维.
+version: 1.1.0
+author: Hermes coding agent
+license: MIT
+metadata:
+  hermes:
+    tags: [deploy, docker, compose, server-88, lan, operations, powershell]
+    related_skills: [static-deploy-mcp, desktop-release-ci-playbook, project-repo-standards]
 ---
 
 # 局域网 88 服务器 (100.64.0.88) 部署与运维技能
+
+> 版本记录：1.1.0 完善 88 服务器部署与运维规范，互链 static-deploy-mcp（静态分发）与 desktop-release-ci-playbook（流水线发布）。
+
+> **相关技能**：
+> - [static-deploy-mcp](../static-deploy-mcp/SKILL.md) — 88 服务器 8088 端口上的静态资产与原型分发服务 MCP 客户端
+> - [desktop-release-ci-playbook](../desktop-release-ci-playbook/SKILL.md) — Woodpecker CI 流水线在本机 88 服务器上的自动化 compose 部署
+> - [project-repo-standards](../project-repo-standards/SKILL.md) — 项目初始化与 CI/CD 选型标准
 
 本技能规定了在局域网 **88 服务器**（`100.64.0.88`）上部署、升级与管理 Docker 化应用的标准规范、约束条件及自动化流程。
 
@@ -178,12 +191,18 @@ ssh -i "C:\Users\HXD\.ssh\xl" root@100.64.0.88 "cd /opt/deploy/<项目名称> &&
 
 > 本技能的 PowerShell 脚本与 Compose 模板已转写为 Markdown；`deploy-helper.ps1` 按节还原后可直接执行。
 
-## 更新与升级（统一走 skillctl）
+## 版本与升级（统一走 skillctl）
 
-更新源：`http://100.64.0.88:8088/.well-known/skills/index.json`
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
 
 ```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
 ./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后升级（逐文件 sha256 校验）
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
 ```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

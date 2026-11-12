@@ -1,26 +1,23 @@
 ---
 name: static-deploy-mcp
-description: Use when 用户要把原型 / HTML / 截图 / 图片 / 静态文件发布到服务器并拿到一个可访问链接，或抱怨「手机上打不开你生成的东西 / 只看得到本地路径」。
-version: 2.0.1
+description: Use when 用户要把原型 / HTML / 截图 / 图片 / 静态文件发布到服务器并拿到一个可访问链接，或抱怨「手机上打不开你生成的东西 / 只看得到本地路径」。触发词：static-deploy、发布原型、上传图片、手机预览、deploy_static_project、upload_image。
+version: 2.1.0
+author: Hermes coding agent
+license: MIT
+metadata:
+  hermes:
+    tags: [mcp, static-deploy, prototype, upload, sharing]
+    related_skills: [server-88-deploy, frontend-review, ui-diff]
 ---
 
-## 版本与升级（统一走 skillctl）
-
-更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
-
-```bash
-# 首次：下载通用客户端（每台机器一次）
-curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
-
-# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
-./skillctl.py list                                  # 本地各技能版本 vs 注册表
-./skillctl.py update --to <你的技能目录>             # 默认只检测
-./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
-```
-
-版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。
-
 # static-deploy 原型与图片分发 MCP
+
+> 版本记录：2.1.0 整合上传技能去重，互链 server-88-deploy（服务宿主与容器运维）与 ui-diff/frontend-review；规范升级段移至文末；2.0.1 升级段落统一走 skillctl。
+
+> **相关技能**：
+> - [server-88-deploy](../server-88-deploy/SKILL.md) — static-deploy 所在 88 服务器的容器运维与部署规范
+> - [ui-diff](../ui-diff/SKILL.md) — 原型与实现画面的跨平台截图比对
+> - [frontend-review](../frontend-review/SKILL.md) — 前端页面审查与交付自检
 
 把本机生成的 HTML 原型、截图、图片推到一台内网服务器，换成一个**手机能直接点开**的网址。
 
@@ -101,3 +98,19 @@ curl.exe -X POST "http://100.64.0.88:8088/api/deploy" `
 - [references/config-snippet.md](references/config-snippet.md) — 客户端配置、能力提示词
 - [references/publish-patterns.md](references/publish-patterns.md) — 发布 HTML/图片的套路与链接改写
 - [references/troubleshooting.md](references/troubleshooting.md) — 上传失败、链接打不开、目录残留
+
+## 版本与升级（统一走 skillctl）
+
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
+
+```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
+./skillctl.py list                                  # 本地各技能版本 vs 注册表
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
+```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

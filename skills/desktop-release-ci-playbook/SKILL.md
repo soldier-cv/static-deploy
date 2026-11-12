@@ -1,7 +1,7 @@
 ---
 name: desktop-release-ci-playbook
-description: Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。
-version: 1.1.1
+description: Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。触发词：Tauri 发版、CI 排障、latest.json、Gitee 镜像、Woodpecker 流水线、桌面客户端更新。
+version: 1.2.0
 author: 程序员（coding）
 license: MIT
 platforms: [linux, macos, windows]
@@ -14,10 +14,17 @@ triggers:
 metadata:
   hermes:
     tags: [ci, github-actions, gitee, woodpecker, tauri, release]
-    related_skills: [tauri-desktop-release-pipeline, woodpecker-ci-pipelines, coding-dispatch]
+    related_skills: [server-88-deploy, project-repo-standards, static-deploy-mcp]
 ---
 
 # 桌面应用发版 CI 全链路（GitHub Actions + Gitee 镜像 + Woodpecker）
+
+> 版本记录：1.2.0 整合上传技能去重，互链 server-88-deploy（本机部署）与 static-deploy-mcp，修复外部技能引用表述与标准升级段；1.1.1 升级段落统一走 skillctl。
+
+> **相关技能**：
+> - [server-88-deploy](../server-88-deploy/SKILL.md) — 88 服务器 Docker 服务与 Compose 运维规范
+> - [project-repo-standards](../project-repo-standards/SKILL.md) — CI 选型（Woodpecker vs GHA）与多交付形态升级机制
+> - [static-deploy-mcp](../static-deploy-mcp/SKILL.md) — 客户端静态页面分发
 
 一条流水线真正要交付的东西只有一件：**用户点"检查更新"能装上**。编译绿、job 全绿都不算。
 本手册按「编译 → 签名 → 分发 → 部署」四段拆解，每段给出失败分类、可用写法与验收命令。
@@ -88,8 +95,8 @@ gitee-release # 等以上全完 → 推 tag + 搬附件到 Gitee + 校验下载�
 而 CI runner 的 debug keystore 每轮现生成 → 每发一版换一次证书，用户在下一版才发现「更新失败」。
 
 发布路径上必须有：密钥落位步骤（缺项即失败）→ 配置期硬失败开关 → 产物 `-debugkey` 检查 →
-`apksigner --print-certs` 指纹强校验。完整配方与逐版取证、交付口径见 `android-build-env`
-的「发布链路」与 `android-build-env` 的 `references/apk-signature-triage.md`（取指纹只用 apksigner，别手写解析器写进汇报）。
+`apksigner --print-certs` 指纹强校验。完整配方与逐版取证、交付口径见外部技能 `android-build-env`
+的「发布链路」与其 `apk-signature-triage.md` 排障手册（取指纹只用 apksigner，别手写解析器写进汇报）。
 
 ## 骨架三：GitHub → Gitee 双通道（国内可用性）
 
@@ -187,23 +194,27 @@ docker inspect <container> --format '{{.Image}}'; docker images --digests | grep
 
 原则：**路径、仓库名、镜像名全部参数化，凭据只走 Secrets/`from_secret`**；文档里不留 token 与内网地址。
 
-## 分发与安装（给其它 agent）
-
-本技能的公开发布位（去掉本机特有路径即为通用版）：
-
-```bash
-# 首次：下载通用客户端（每台机器一次）
-curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
-
-# 安装 / 升级统一走 skillctl（逐文件 sha256 校验；默认只检测，--apply 才升级）
-./skillctl.py install desktop-release-ci-playbook --to <你的技能目录>
-./skillctl.py update    --to <你的技能目录> [--apply]
-```
-
-装完让 agent 读一遍 `SKILL.md` 即可按段排障；它的 `references/` 是可直接抄的完整 yml 片段。
-
 ## 边界
 
 - 本手册只覆盖「桌面应用 + GitHub/Gitee + Woodpecker 部署」。k3s/GitOps/ArgoCD 发布见 `k3s-gitops-onboarding`，
   Woodpecker 服务端运维（PAT、sqlite、forge timeout）见 `woodpecker-ci-pipelines`。
 - 不改 CI 的触发策略与权限边界属于产品决策：push 不触发打包、只在 tag 发版，是刻意的成本选择。
+- 88 服务器本机 compose 运维与宿主机路径约束，见 [server-88-deploy](../server-88-deploy/SKILL.md)。
+
+## 版本与升级（统一走 skillctl）
+
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
+
+```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
+./skillctl.py list                                  # 本地各技能版本 vs 注册表
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
+```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。
+
+装完让 agent 读一遍 `SKILL.md` 即可按段排障；它的 `references/` 是可直接抄的完整 yml 片段。

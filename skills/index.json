@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 20:46:20",
+  "updated_at": "2026-11-12 20:59:06",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -22,7 +22,7 @@
     },
     {
       "name": "desktop-release-ci-playbook",
-      "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
+      "description": "Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。触发词：Tauri 发版、CI 排障、latest.json、Gitee 镜像、Woodpecker 流水线、桌面客户端更新。",
       "version": "1.2.0",
       "updated_at": "2026-11-12 20:45:51",
       "files": [
@@ -40,7 +40,7 @@
     },
     {
       "name": "frontend-review",
-      "description": "Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。",
+      "description": "Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。触发词：frontend-review、前端审查、设计走查、入口冗余、页面自检、UI 验收。",
       "version": "1.1.0",
       "updated_at": "2026-11-12 20:41:33",
       "files": [
@@ -52,7 +52,7 @@
     },
     {
       "name": "hearthbox",
-      "description": "Hearthbox（炉边）自制游戏平台的全部工作：写游戏、设计玩法、改平台本体。当用户提到炉边、hearthbox、要写一个能上这个平台的游戏、要给游戏加金手指/设置项/成就、要改平台的运行时或壳、或者问这个平台怎么用、游戏怎么上架时使用。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。",
+      "description": "Use when 进行 Hearthbox（炉边）自制游戏平台的全部开发工作：写游戏、设计玩法、改平台本体、配置金手指/设置项/成就、调试运行时与货架。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。",
       "version": "1.0.0",
       "updated_at": "2026-11-12 20:44:32",
       "files": [
@@ -70,23 +70,23 @@
     },
     {
       "name": "project-repo-standards",
-      "description": "项目仓库初始化规范：文件用途判据、CI 选型（Woodpecker/GHA 共存规则）、AGENTS.md 写法、按交付形态分层的升级机制（Web/桌面/安卓/固件/扩展）、Gitee 镜像、脚本经验",
+      "description": "Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。触发词：新建仓库、项目规范、AGENTS.md、.gitignore、Woodpecker、GitHub Actions、Gitee 镜像、版本纪律。",
       "version": "1.6.0",
-      "updated_at": "2026-11-12 20:46:17",
+      "updated_at": "2026-11-12 20:46:35",
       "files": [
         "SKILL.md",
         "references/ci-coexistence.md",
         "references/upgrade-by-delivery-type.md"
       ],
       "sha256": {
-        "SKILL.md": "e67cb5d5425e714c3b579bb2e07b882cc92832045fa8f929b0715f6b50ddae0f",
+        "SKILL.md": "9d3f008d7a19d7691f9592d3c350489927cf986589cf3e24c3f26a13057eeaba",
         "references/ci-coexistence.md": "2ae6bfbb51a336ccbce179090d144a73fdb53a61d6a3a28175dbecdb53e46076",
         "references/upgrade-by-delivery-type.md": "307c7c0e34b64da37ac4d451ba811f6886aff51a8fdbcb0d75e8017ddcec975c"
       }
     },
     {
       "name": "resource-mgr",
-      "description": "Use when 发布资源包、管理下载版本或设备拉包更新。",
+      "description": "Use when 发布资源包、管理下载版本或给客户端配置下载地址。",
       "version": "4.0.1",
       "updated_at": "2026-11-12 16:54:44",
       "files": [
@@ -98,7 +98,7 @@
     },
     {
       "name": "selfapp",
-      "description": "Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。",
+      "description": "Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。触发词：selfapp、自研应用、全栈架构、Hono、Drizzle、IDOR、滑动窗口限频、协议合规、feature-hub。",
       "version": "1.1.0",
       "updated_at": "2026-11-12 20:38:29",
       "files": [
@@ -124,7 +124,7 @@
     },
     {
       "name": "server-88-deploy",
-      "description": "Standard operating procedure and automation for deploying services on LAN server 88 (100.64.0.88). Use whenever deploying, updating, inspecting, or managing containers or services on server 88, or working with /opt/deploy and /data paths.",
+      "description": "Use when deploying, updating, inspecting, or managing Docker containers or services on LAN server 88 (100.64.0.88), or working with /opt/deploy and /data paths. 触发词：server 88, 100.64.0.88, docker compose deploy, deploy-helper, 88部署, 容器运维.",
       "version": "1.1.0",
       "updated_at": "2026-11-12 20:42:47",
       "files": [
@@ -142,31 +142,31 @@
     },
     {
       "name": "skill-distribution",
-      "description": "Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。",
-      "version": "1.0.1",
-      "updated_at": "2026-11-12 18:06:26",
+      "description": "Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills。",
+      "version": "1.1.0",
+      "updated_at": "2026-11-12 20:46:57",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "4163279986d68c2760f5cd873033e1350c2127b6004264eadc15233fab5ea877"
+        "SKILL.md": "b205cf82462e22f4bb22cd8cdaae8ce67e08f56b20f48df504a3fb571b0e5a35"
       }
     },
     {
       "name": "skill-publisher",
-      "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /​.well-known/skills 分发（static-deploy，端口 8088）；覆盖编写规范、发布三步、版本纪律与 skillctl 升级段模板。",
-      "version": "1.1.0",
-      "updated_at": "2026-11-12 19:56:19",
+      "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /.well-known/skills 分发（static-deploy，端口 8088）；覆盖编写规范、发布三步、版本纪律与 skillctl 升级段模板。触发词：发布技能、skill-publisher、新建技能、技能规范、sync_index、版本纪律。",
+      "version": "1.3.0",
+      "updated_at": "2026-11-12 20:59:06",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "8997d8648393c04c19ab6b600e1faa45b71cf604d5956f47fddee9f7836c0dfd"
+        "SKILL.md": "01342e28e849d391cf8991b9d2a6a90a9d9111402bddea57e42c38b8578da0f3"
       }
     },
     {
       "name": "static-deploy-mcp",
-      "description": "把原型/HTML/图片发布到服务器并拿到可访问链接：何时该调、接入配置、通道选择、常用套路、排障（任何 MCP 客户端通用）",
+      "description": "Use when 用户要把原型 / HTML / 截图 / 图片 / 静态文件发布到服务器并拿到一个可访问链接，或抱怨「手机上打不开你生成的东西 / 只看得到本地路径」。触发词：static-deploy、发布原型、上传图片、手机预览、deploy_static_project、upload_image。",
       "version": "2.1.0",
       "updated_at": "2026-11-12 20:45:08",
       "files": [
@@ -208,9 +208,9 @@
     },
     {
       "name": "webapp-testing",
-      "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
+      "description": "Use when 需要对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试：用 Python Playwright 编写自动化脚本、驱动多服务生命周期（with_server.py）、捕获页面状态与浏览器日志。触发词：webapp-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:40:41",
+      "updated_at": "2026-11-12 20:52:29",
       "files": [
         "SKILL.md",
         "references/examples.md",
@@ -218,7 +218,7 @@
         "references/with-server.md"
       ],
       "sha256": {
-        "SKILL.md": "c664fc2d092072ccd09ccca8c0597b848022e182ddc48fd23f1072fe34f88762",
+        "SKILL.md": "b1835d21fec3b80dd7e061cd9d29d88a6ab86b28a1a0acbcc1973f63ba997e20",
         "references/examples.md": "0c2ad883faff4d316dd9330358adf7284202f6423f676077e32acfe8f6d944c5",
         "references/license.md": "d314487ae6398b2c4df0aa207e3b4432817da511d239d5189d71d4acaa691c22",
         "references/with-server.md": "579da75abb0baf7dfb1207f8393a3f839f827a1cd1703e46ab023815f7cd96ac"

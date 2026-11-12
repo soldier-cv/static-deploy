@@ -1,8 +1,8 @@
 ---
 name: skill-distribution
-description: Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。
+description: Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills。
 tags: [skill, distribution, static-deploy, skillctl]
-version: 1.0.1
+version: 1.1.0
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -12,6 +12,12 @@ metadata:
 ---
 
 # 技能分发：发布端 + 安装升级端（skillctl）
+
+> 版本记录：1.1.0 整合上传技能去重，补齐文首相关技能导航与文末标准升级段；1.0.1 顶部加快速接入一行命令。
+
+> **相关技能**：
+> - [skill-publisher](../skill-publisher/SKILL.md) — 技能编写规范、发布三步与版本纪律
+> - [project-repo-standards](../project-repo-standards/SKILL.md) — 仓库内技能真源管理与符号链接分发
 
 ## 快速接入（一行，agent 执行这一条即可完成全部自举）
 
@@ -68,3 +74,19 @@ bootstrap 会：自装 skillctl 副本到 `<技能目录>/.skillctl/skillctl.py`
 - frontmatter 必带 name（=目录名）/description（Use when 触发场景）/version（SemVer）。
 - 发布前自检清单见 skill-publisher 第四节，含「客户端实测 install + update 报已是最新」。
 - 远程 agent 贡献：clone soldier-cv/static-deploy → push → 服务器侧 pull + 重跑 sync_index 收尾（pull 后必须重跑，保证 index 与磁盘一致）。
+
+## 版本与升级（统一走 skillctl）
+
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
+
+```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
+./skillctl.py list                                  # 本地各技能版本 vs 注册表
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
+```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

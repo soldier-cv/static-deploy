@@ -1,16 +1,25 @@
 ---
 name: project-repo-standards
-description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。
-version: 1.5.0
+description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。触发词：新建仓库、项目规范、AGENTS.md、.gitignore、Woodpecker、GitHub Actions、Gitee 镜像、版本纪律。
+version: 1.6.0
 author: Hermes coding agent
 license: MIT
 metadata:
   hermes:
     tags: [repo, scaffolding, woodpecker, github-actions, agents-md, gitee, gitignore]
-    related_skills: [woodpecker-ci-pipelines, github-workflow, k3s-gitops-onboarding, open-source-upgrade-patrol, server-deployment-standards]
+    related_skills: [server-88-deploy, selfapp, skill-publisher, skill-distribution, desktop-release-ci-playbook]
 ---
 
 # 项目仓库规范：初始化、CI 选型、文档与升级
+
+> 版本记录：1.6.0 整合上传技能去重：清理旧式逐文件 curl 升级残留，统一至文末 skillctl 标准升级段，互链 server-88-deploy 与 selfapp；1.5.0 新增交付形态分层与 skills 随代码真源分发规范。
+
+> **相关技能**：
+> - [server-88-deploy](../server-88-deploy/SKILL.md) — 88 服务器 Docker 部署与运维规范
+> - [selfapp](../selfapp/SKILL.md) — 自研全栈应用工程与架构标准
+> - [skill-publisher](../skill-publisher/SKILL.md) — 技能编写规范、发布三步与版本纪律
+> - [skill-distribution](../skill-distribution/SKILL.md) — 技能分发与客户端安装升级（skillctl）
+> - [desktop-release-ci-playbook](../desktop-release-ci-playbook/SKILL.md) — 桌面应用发版 CI 全链路排障
 
 > 适用：新仓库开工，或给已有仓库补 CI / 文档 / 忽略规则。
 > 目标：**每个文件都有存在理由**。没理由的不要建，建了的要能被验证。
@@ -20,7 +29,7 @@ metadata:
 在以下任一情形加载本技能：
 
 - 新建项目仓库，要在建代码前定下 README / .gitignore / AGENTS.md / CI 的最小集
-- **按本技能干活前，先跑「更新与版本」一节的版本比对命令**（约 1 秒），落后就先升级再动手
+- **按本技能干活前，先跑文末「版本与升级」一节的版本比对命令**（约 1 秒），落后就先升级再动手
 - 已有仓库缺 CI、CI 写错了、或两套流水线并存互相打架
 - 要判断这个项目该用 Woodpecker（内网部署）还是 GitHub Actions（对外发布）
 - 要给公开项目接 Gitee 镜像，让国内能下载安装包
@@ -28,72 +37,11 @@ metadata:
 
 不适用：单纯的依赖升级排障（用 `open-source-upgrade-patrol`）、k3s 首次接入集群（用 `k3s-gitops-onboarding`）、Woodpecker 服务端自身故障（用 `woodpecker-ci-pipelines`）。
 
-## 更新与版本
-
-本文件会持续修订。**升级前先查版本号，不要用旧版规则指导新项目。**
-
-| 项 | 值 |
-|---|---|
-| 当前版本 | 见本文件 frontmatter 的 `version` |
-| 更新源（唯一权威） | `http://100.64.0.88:8088/.well-known/skills/index.json` |
-| 安装根 | `http://100.64.0.88:8088/.well-known/skills/project-repo-standards/` |
-
-**检查是否有新版**（比对 frontmatter 里的 version）：
-
-```bash
-curl -s http://100.64.0.88:8088/.well-known/skills/index.json | python3 -c "
-import json,sys
-s=[x for x in json.load(sys.stdin)['skills'] if x['name']=='project-repo-standards'][0]
-print(s['version'], s['updated_at'])
-print('files:', ', '.join(s['files']))
-"
-```
-
-**升级到最新版**（覆盖本地副本，含 references）：
-
-通用客户端（推荐，任意硬件/任意 CLI agent 可用）：
-
-```bash
-curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
-./skillctl.py list                                  # 看注册表有什么、本地装到哪版
-./skillctl.py install project-repo-standards --to <你的技能目录>
-./skillctl.py update --to <你的技能目录> [--apply]   # 默认只检测，--apply 才升级
-```
-
-或按下面的逐文件 curl 方式：
-
-```bash
-BASE=http://100.64.0.88:8088/.well-known/skills/project-repo-standards
-DEST=<你的技能目录>/project-repo-standards
-mkdir -p "$DEST/references"
-for f in SKILL.md references/ci-coexistence.md references/upgrade-by-delivery-type.md; do
-  curl -fsSL "$BASE/$f" -o "$DEST/$f" || { echo "下载失败: $f"; exit 1; }
-done
-echo "已升级到 $(grep -m1 '^version:' "$DEST/SKILL.md")"
-```
-
-**校验完整性**（index.json 里有每个文件的 sha256，下载后建议对一下）：
-
-```bash
-cd "$DEST" && curl -s http://100.64.0.88:8088/.well-known/skills/index.json | python3 -c "
-import json,sys,hashlib,os
-s=[x for x in json.load(sys.stdin)['skills'] if x['name']=='project-repo-standards'][0]
-bad=[f for f,h in s['sha256'].items() if hashlib.sha256(open(f,'rb').read()).hexdigest()!=h]
-print('OK 全部一致' if not bad else 'MISMATCH: '+', '.join(bad))
-"
-```
-
-**版本语义**（决定你要不要重读全文）：
-
-- `patch`（1.2.x）：修错别字、补充说明，结论不变，无需重读
-- `minor`（1.x.0）：新增章节或规则，原有结论不变，建议看新增部分
-- `major`（2.0.0）：**推翻既有结论**（如 CI 选型原则变更），必须重读全文
-
 ### agent 怎么知道该升级（惰性腿 + 兜底腿）
 
 现状：**没有任何生态能向 agent 推送技能更新**。Claude Code 插件市场是会话启动后随机延迟拉一次 marketplace（运行中会话保持旧版）；skills.sh / `gh skill` 全靠人手动跑 update；裸 md 装完就彻底失联。所以只能自己补两条腿：
 
-1. **惰性腿（agent 自查，零常驻成本）**：agent 按本技能干活前，先跑一次上面的「检查是否有新版」命令（约 1 秒）。版本落后 → 先按升级命令更新，再执行任务。这条写进了本技能的 When to Use，加载即生效。
+1. **惰性腿（agent 自查，零常驻成本）**：agent 按本技能干活前，先跑一次文末的 `skillctl.py update --to <你的技能目录>`（约 1 秒）。版本落后 → 先加 `--apply` 更新，再执行任务。
 2. **兜底腿（巡检 cron，静默契约）**：各 profile 配每日低频巡检，比对本地已装技能文件的 sha256 与 index.json 中的 sha256，**不一致才发卡，一致 stdout 留空**。防的是「agent 忘了跑惰性腿」。coding profile 已有现成实现：`/home/xl/.hermes/profiles/coding/scripts/skill_version_patrol.py`（no_agent cron，可直接复制到其它 profile 改路径复用）。
 
 **维护约定**：`version` 只写在 SKILL.md 的 frontmatter，index.json 里的 version/sha256/updated_at 全部由 `skills/sync_index.py` 从磁盘提取，**不要手改 index.json**。
@@ -515,3 +463,19 @@ curl -s http://<dist>/index.json | python3 -c "import json,sys;s=[x for x in jso
 - **同步前先判哪边是新的，别默认某一边落后**：profile、分发目录、项目仓库三处副本都可能各自演进。`diff` 两边 SKILL.md + 比对 frontmatter version，内容多/版本高的才是真源，从真源单向覆盖另一边；盲 cp 会把新改动冲掉。
 - **技能内容要跟当前代码核对**（README + 路由/接口文件 + 实际 curl），不要照抄上一版；上游新增能力时按 minor 升版，并在「常见坑」表里补一条。
 - 分发目录只放 `SKILL.md` 与 `references/*.md`：nginx 白名单只放行这两类，别指望从分发链路取脚本或其它文件。
+
+## 版本与升级（统一走 skillctl）
+
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
+
+```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
+./skillctl.py list                                  # 本地各技能版本 vs 注册表
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
+```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。

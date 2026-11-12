@@ -1,16 +1,23 @@
 ---
 name: frontend-review
-description: Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。
-version: 1.0.0
+description: Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。触发词：frontend-review、前端审查、设计走查、入口冗余、页面自检、UI 验收。
+version: 1.1.0
 author: Hermes coding agent
 license: MIT
 metadata:
   hermes:
     tags: [frontend, ui, review, layout, ux, self-check, web]
-    related_skills: [skill-publisher, project-repo-standards]
+    related_skills: [webapp-testing, ui-diff, skill-publisher]
 ---
 
 # 前端交付审查：AI 写完页面后怎么挑出问题
+
+> 版本记录：1.1.0 整合上传技能去重：互链 UI 簇技能（webapp-testing 功能测试、ui-diff 视觉比对），补齐标准升级段；1.0.0 首发前端交付审查协议。
+
+> **相关技能**：
+> - [webapp-testing](../webapp-testing/SKILL.md) — 本地 Web 应用 Playwright 功能与交互自动化测试
+> - [ui-diff](../ui-diff/SKILL.md) — 跨平台 UI 截图比对与视觉回归验收
+> - [skill-publisher](../skill-publisher/SKILL.md) — 技能发布规范
 
 AI 写 UI 快，但四类问题高发：**功能入口冗余**（同一功能在多个页面各写一遍）、**入口杂乱**（按钮放在奇怪的页面）、**页面写成需求文档**（大段描述文字）、**布局不合理**。本技能把「合理不合理」变成可机械核对的检查项，交付前逐项过，不靠自觉。
 
@@ -65,5 +72,20 @@ grep -rn "操作关键词" src/ --include="*.vue" --include="*.tsx" -l
 ## 硬约束
 
 - 本技能是审查协议，**不规定视觉风格**；风格类需求用对应设计技能（如 design-taste-frontend）。
-- 检查项必须以 grep/截图/清单等可核对形式执行，禁止「我觉得没问题」式口头自检。
-- 版本与升级：本技能按 skill-publisher 规范发布，升级走 skillctl。
+- 检查项必须以 grep/截图/清单等可核对形式执行，禁止「我觉得没问题」式口头自检（自动化交互用 `webapp-testing`，截图视觉对比用 `ui-diff`）。
+
+## 版本与升级（统一走 skillctl）
+
+更新源（唯一权威）：`http://100.64.0.88:8088/.well-known/skills/index.json`
+
+```bash
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 干活前惰性检查（约 1 秒）：落后就先升级，再动手
+./skillctl.py list                                  # 本地各技能版本 vs 注册表
+./skillctl.py update --to <你的技能目录>             # 默认只检测（--to 用绝对路径）
+./skillctl.py update --to <你的技能目录> --apply     # 确认后才升级（逐文件 sha256 校验）
+```
+
+版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。
