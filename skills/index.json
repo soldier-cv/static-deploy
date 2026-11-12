@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-11 22:11:55",
+  "updated_at": "2026-11-12 11:25:41",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -25,15 +25,15 @@
     {
       "name": "project-repo-standards",
       "description": "项目仓库初始化规范：文件用途判据、CI 选型（Woodpecker/GHA 共存规则）、AGENTS.md 写法、按交付形态分层的升级机制（Web/桌面/安卓/固件/扩展）、Gitee 镜像、脚本经验",
-      "version": "1.4.0",
-      "updated_at": "2026-11-11 22:10:03",
+      "version": "1.5.0",
+      "updated_at": "2026-11-12 11:25:41",
       "files": [
         "SKILL.md",
         "references/ci-coexistence.md",
         "references/upgrade-by-delivery-type.md"
       ],
       "sha256": {
-        "SKILL.md": "edc24c67e204599b931f49f453e3f43f7b6acd683261768a25dfcfb650db3db2",
+        "SKILL.md": "0d52b12d7902c94d783aedd675861ad2ab76ebd91cefdd4b8a85c950b98e6dcc",
         "references/ci-coexistence.md": "2ae6bfbb51a336ccbce179090d144a73fdb53a61d6a3a28175dbecdb53e46076",
         "references/upgrade-by-delivery-type.md": "307c7c0e34b64da37ac4d451ba811f6886aff51a8fdbcb0d75e8017ddcec975c"
       }

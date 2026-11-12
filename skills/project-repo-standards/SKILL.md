@@ -1,7 +1,7 @@
 ---
 name: project-repo-standards
 description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。
-version: 1.4.0
+version: 1.5.0
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -83,7 +83,7 @@ print('OK 全部一致' if not bad else 'MISMATCH: '+', '.join(bad))
 现状：**没有任何生态能向 agent 推送技能更新**。Claude Code 插件市场是会话启动后随机延迟拉一次 marketplace（运行中会话保持旧版）；skills.sh / `gh skill` 全靠人手动跑 update；裸 md 装完就彻底失联。所以只能自己补两条腿：
 
 1. **惰性腿（agent 自查，零常驻成本）**：agent 按本技能干活前，先跑一次上面的「检查是否有新版」命令（约 1 秒）。版本落后 → 先按升级命令更新，再执行任务。这条写进了本技能的 When to Use，加载即生效。
-2. **兜底腿（巡检 cron，静默契约）**：各 profile 配每日低频巡检，比对本地已装技能文件的 sha256 与 index.json 中的 sha256，**不一致才发卡，一致 stdout 留空**。防的是「agent 忘了跑惰性腿」。
+2. **兜底腿（巡检 cron，静默契约）**：各 profile 配每日低频巡检，比对本地已装技能文件的 sha256 与 index.json 中的 sha256，**不一致才发卡，一致 stdout 留空**。防的是「agent 忘了跑惰性腿」。coding profile 已有现成实现：`/home/xl/.hermes/profiles/coding/scripts/skill_version_patrol.py`（no_agent cron，可直接复制到其它 profile 改路径复用）。
 
 **维护约定**：`version` 只写在 SKILL.md 的 frontmatter，index.json 里的 version/sha256/updated_at 全部由 `skills/sync_index.py` 从磁盘提取，**不要手改 index.json**。
 
@@ -129,6 +129,7 @@ print('OK 全部一致' if not bad else 'MISMATCH: '+', '.join(bad))
 | `.gitattributes` | 行尾/LFS/语言统计 | 跨平台客户端、含二进制 | Windows 检出后脚本带 CRLF 全挂 |
 | `.editorconfig` | 缩进/编码统一 | 多人或跨编辑器 | 无意义的格式化 diff |
 | `CHANGELOG.md` | 版本变更记录 | 有版本号发布 | 用户不知道升级改了什么 |
+| `favicon.ico` + 图标链 | 浏览器标签/收藏夹/分享卡片的身份标识 | **有 Web UI 的项目** | 标签页显示默认地球图标，分享出去像模板站，观感掉一档 |
 | `SECURITY.md` | 漏洞上报渠道 | 公开且有服务端 | 安全问题公开在 issue 里 |
 | `CONTRIBUTING.md` | 外部贡献流程 | 接受外部 PR | 收到不合规 PR |
 
@@ -143,6 +144,12 @@ print('OK 全部一致' if not bad else 'MISMATCH: '+', '.join(bad))
 - 项目特有：数据库文件、上传目录、缓存目录
 
 自查：`git ls-files | grep -E '\.env$|\.pem$|\.key$'` 必须为空。
+
+### 1.1.1 favicon 判据（有 Web UI 就必须有）
+
+- 最小集：`favicon.ico`（32×32）+ HTML 里 `<link rel="icon" ...>`；有 PWA/移动端入口的再加 `apple-touch-icon`（180×180）与 `manifest.json` 的 icons。
+- 图标放 `static/` 或根目录并入库（`.gitignore` 别挡它）；SPA 别只在 `index.html` 写外链——离线/内网环境要能加载。
+- 自查：项目起服务后 `curl -sI http://127.0.0.1:<port>/favicon.ico` 返回 200。
 
 ### 1.2 `README.md` 最小结构（5 段，别写成流水账）
 
@@ -184,7 +191,7 @@ print('OK 全部一致' if not bad else 'MISMATCH: '+', '.join(bad))
 ## 0. 项目定位（一句话 + 仓库地址 + 分支）
 ## 1. 运行环境事实（端口、路径、数据库名、依赖真源、生产入口）
 ## 2. 硬规则（不许做什么，为什么）
-## 3. 开发与验证流程（改完必跑的命令）
+## 3. 开发与验证流程（开工第一步：`git fetch && git pull --ff-only` 拉齐远端，多环境并行开发必须先同步再动工；改完必跑的命令）
 ## 4. 已知坑（踩过的，别再踩）
 ## 5. 需求台账 / 决策日志（只记结论与日期）
 ```
@@ -485,5 +492,6 @@ curl -s http://<dist>/index.json | python3 -c "import json,sys;s=[x for x in jso
 
 - **bind mount 挂子目录会被 git 操作打穿**：`rebase` / `checkout` 若删掉并重建该子目录，容器里的 mount 指向已删除的 inode，容器内目录变空、请求静默 404（重启容器才恢复）。挂**仓库根**或不会被整体删除的父目录。
 - **改技能前先 `git fetch`，看远端是否领先**：本机工作区可能落后好几个提交（对方在别处开发完推上来了），直接 push 会被 non-fast-forward 拒掉；先 rebase 再继续，不要把本地当成最新。
+- **同步前先判哪边是新的，别默认某一边落后**：profile、分发目录、项目仓库三处副本都可能各自演进。`diff` 两边 SKILL.md + 比对 frontmatter version，内容多/版本高的才是真源，从真源单向覆盖另一边；盲 cp 会把新改动冲掉。
 - **技能内容要跟当前代码核对**（README + 路由/接口文件 + 实际 curl），不要照抄上一版；上游新增能力时按 minor 升版，并在「常见坑」表里补一条。
 - 分发目录只放 `SKILL.md` 与 `references/*.md`：nginx 白名单只放行这两类，别指望从分发链路取脚本或其它文件。
