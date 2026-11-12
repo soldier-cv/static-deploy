@@ -539,6 +539,65 @@ class RegistryCase(unittest.TestCase):
         self.assertIn("已跳过 skill-publisher 1.0.0（已安装）", proc.stdout)
         self.assertTrue((self.to / "skill-distribution" / "SKILL.md").exists())
 
+    def test_20_install_scripts_and_non_md_files(self) -> None:
+        files = {
+            "SKILL.md": b"# alpha\n",
+            "references/note.md": b"note\n",
+            "scripts/deploy.sh": b"#!/usr/bin/env bash\necho ok\n",
+            "scripts/helper.py": b"print('hi')\n",
+            "assets/config.json": b'{"ok": true}\n',
+            "templates/job.yaml": b"name: job\n",
+        }
+        self.upsert("alpha", "1.0.0", files)
+        proc = self.cli("install", "alpha", "--to", str(self.to))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        dest = self.skill_dir()
+        for rel, body in files.items():
+            self.assertEqual((dest / rel).read_bytes(), body, rel)
+        manifest = json.loads((dest / ".skillctl-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["files"], list(files))
+        self.assertEqual(
+            manifest["sha256"]["scripts/deploy.sh"],
+            hashlib.sha256(files["scripts/deploy.sh"]).hexdigest(),
+        )
+
+        # 未修改时已是最新
+        fresh = self.cli("update", "--to", str(self.to))
+        self.assertEqual(fresh.returncode, 0, fresh.stderr)
+        self.assertEqual(fresh.stdout, "已是最新\n")
+
+        # 脚本内容漂移可被 sha256 检出并通过 --apply 修复
+        script_path = dest / "scripts" / "deploy.sh"
+        script_path.write_bytes(b"#!/usr/bin/env bash\necho tampered\n")
+        drift = self.cli("update", "--to", str(self.to))
+        self.assertEqual(drift.returncode, 0, drift.stderr)
+        self.assertIn("漂移", drift.stdout)
+        applied = self.cli("update", "--to", str(self.to), "--apply")
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        self.assertEqual(script_path.read_bytes(), files["scripts/deploy.sh"])
+
+        # 隐藏文件（如 scripts/.hidden.sh）在 index 中仍被拒绝
+        bad_body = b"bad"
+        self.state["index_bytes"] = json.dumps(
+            {
+                "schema": 2,
+                "skills": [
+                    {
+                        "name": "beta",
+                        "description": "x",
+                        "version": "1.0.0",
+                        "updated_at": "2026-11-12 00:00:00",
+                        "files": ["scripts/.hidden.sh"],
+                        "sha256": {"scripts/.hidden.sh": hashlib.sha256(bad_body).hexdigest()},
+                    }
+                ],
+            }
+        ).encode("utf-8")
+        bad_proc = self.cli("install", "beta", "--to", str(self.to))
+        self.assertNotEqual(bad_proc.returncode, 0)
+        self.assertIn("非法文件路径", bad_proc.stderr)
+        self.assertFalse((self.to / "beta").exists())
+
 
 class TestUnreachable(unittest.TestCase):
     def test_timeout(self) -> None:

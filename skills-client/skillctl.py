@@ -135,7 +135,6 @@ def validate_rel_path(rel: object) -> str:
         or "\\" in rel
         or "\x00" in rel
         or rel.startswith(("/", "~"))
-        or not rel.endswith(".md")
     ):
         raise SkillctlError(f"非法文件路径: {rel!r}")
     parts = rel.split("/")

@@ -20,6 +20,10 @@ from datetime import datetime, timedelta, timezone
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(ROOT, "index.json")
 CST = timezone(timedelta(hours=8))
+ALLOWED_SUBDIRS = ("references", "scripts", "assets", "templates")
+ALLOWED_FILE_RE = re.compile(
+    r"^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:md|py|sh|js|ps1|yaml|yml|json|txt|toml|bat|cmd)$"
+)
 
 
 def read_frontmatter(path):
@@ -50,11 +54,17 @@ def collect(skill_dir):
     if not os.path.isfile(skill_md):
         return None
     files = ["SKILL.md"]
-    ref_dir = os.path.join(skill_dir, "references")
-    if os.path.isdir(ref_dir):
-        for fn in sorted(os.listdir(ref_dir)):
-            if fn.endswith(".md") and os.path.isfile(os.path.join(ref_dir, fn)):
-                files.append(f"references/{fn}")
+    for sub in ALLOWED_SUBDIRS:
+        sub_dir = os.path.join(skill_dir, sub)
+        if os.path.isdir(sub_dir) and not os.path.islink(sub_dir):
+            for fn in sorted(os.listdir(sub_dir)):
+                full_path = os.path.join(sub_dir, fn)
+                if (
+                    ALLOWED_FILE_RE.fullmatch(fn)
+                    and not os.path.islink(full_path)
+                    and os.path.isfile(full_path)
+                ):
+                    files.append(f"{sub}/{fn}")
 
     meta = read_frontmatter(skill_md)
     newest = max(os.path.getmtime(os.path.join(skill_dir, f)) for f in files)
