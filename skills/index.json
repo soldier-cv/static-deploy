@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 16:54:44",
+  "updated_at": "2026-11-12 16:54:58",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [

@@ -1,7 +1,7 @@
 ---
 name: desktop-release-ci-playbook
 description: Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。
-version: 1.1.0
+version: 1.1.1
 author: 程序员（coding）
 license: MIT
 platforms: [linux, macos, windows]
@@ -192,13 +192,12 @@ docker inspect <container> --format '{{.Image}}'; docker images --digests | grep
 本技能的公开发布位（去掉本机特有路径即为通用版）：
 
 ```bash
-BASE=http://<发布机>:8088/.well-known/skills/desktop-release-ci-playbook
-DEST=~/.hermes/skills/devops/desktop-release-ci-playbook
-mkdir -p "$DEST/references"
-curl -fsSL "$BASE/SKILL.md" -o "$DEST/SKILL.md"
-for f in github-actions gitee-mirror woodpecker-compose; do
-  curl -fsSL "$BASE/references/$f.md" -o "$DEST/references/$f.md"
-done
+# 首次：下载通用客户端（每台机器一次）
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+
+# 安装 / 升级统一走 skillctl（逐文件 sha256 校验；默认只检测，--apply 才升级）
+./skillctl.py install desktop-release-ci-playbook --to <你的技能目录>
+./skillctl.py update    --to <你的技能目录> [--apply]
 ```
 
 装完让 agent 读一遍 `SKILL.md` 即可按段排障；它的 `references/` 是可直接抄的完整 yml 片段。
