@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 18:06:26",
+  "updated_at": "2026-11-12 18:43:26",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -20,6 +20,18 @@
         "references/gitee-mirror.md": "f801241544ababbd25b11e7529675dc9b3b649537f3e022f82dd7963a61038a8",
         "references/github-actions.md": "6e851cb1ba1ec643b8d37e580aa7b6f73202720cf7f2bd20f7c5ac593b47287d",
         "references/woodpecker-compose.md": "7a8f47483a36daad426127e77d1b9966b3ef58a20251a2662cd49843cd9bbd57"
+      }
+    },
+    {
+      "name": "frontend-review",
+      "description": "Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 18:43:13",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "5c644424cd0b3e10390ba5f73c8b2c56c57d34aefb89d160571a3f8e61596e00"
       }
     },
     {
