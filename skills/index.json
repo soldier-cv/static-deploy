@@ -1,14 +1,14 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 11:52:04",
+  "updated_at": "2026-11-12 16:54:44",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
     {
       "name": "desktop-release-ci-playbook",
       "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
-      "version": "1.1.0",
-      "updated_at": "2026-11-11 22:11:55",
+      "version": "1.1.1",
+      "updated_at": "2026-11-12 16:54:44",
       "files": [
         "SKILL.md",
         "references/gitee-mirror.md",
@@ -16,7 +16,7 @@
         "references/woodpecker-compose.md"
       ],
       "sha256": {
-        "SKILL.md": "ea1367fc7b59e53b88f5ebc94cf2cb7d843d95973ece23942a2eb4d489527f77",
+        "SKILL.md": "ebc1bc21fca8400b0276ee4c756367456dff0e188f7c6014db6b584c6245d760",
         "references/gitee-mirror.md": "f801241544ababbd25b11e7529675dc9b3b649537f3e022f82dd7963a61038a8",
         "references/github-actions.md": "6e851cb1ba1ec643b8d37e580aa7b6f73202720cf7f2bd20f7c5ac593b47287d",
         "references/woodpecker-compose.md": "7a8f47483a36daad426127e77d1b9966b3ef58a20251a2662cd49843cd9bbd57"
@@ -41,20 +41,20 @@
     {
       "name": "resource-mgr",
       "description": "Use when 发布资源包、管理下载版本或设备拉包更新。",
-      "version": "4.0.0",
-      "updated_at": "2026-11-11 17:02:31",
+      "version": "4.0.1",
+      "updated_at": "2026-11-12 16:54:44",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "1785a6e19545c8c6850d383ab441c1d77ae7735f15e233720a223e57520b0a7f"
+        "SKILL.md": "ae3f9ba36edd89fb6ff68f809ac841fe0f632ba6e4cd8e2993a10279f68274bb"
       }
     },
     {
       "name": "static-deploy-mcp",
       "description": "把原型/HTML/图片发布到服务器并拿到可访问链接：何时该调、接入配置、通道选择、常用套路、排障（任何 MCP 客户端通用）",
-      "version": "2.0.0",
-      "updated_at": "2026-10-21 23:07:57",
+      "version": "2.0.1",
+      "updated_at": "2026-11-12 16:54:44",
       "files": [
         "SKILL.md",
         "references/config-snippet.md",
@@ -62,7 +62,7 @@
         "references/troubleshooting.md"
       ],
       "sha256": {
-        "SKILL.md": "864fe128fb2e2681ad0df0c03e4682c6136ff77c2b4f2d4007a582d7babd8a3c",
+        "SKILL.md": "fac509386152ee7180bbc4548e9d102dc5c31ed84994826bf6851238a54b258f",
         "references/config-snippet.md": "f6063fa063d7c53fd3f3e0873f8f38bdf6dbb27d1f4c8f189ce650356abfd52a",
         "references/publish-patterns.md": "f69f9114911fc19e932f7d5ee1f7087bd984081402e539d3baa4b618986058ff",
         "references/troubleshooting.md": "6306396f6ed7caa5bb0ca2f5944a40115ad37bc60206d41fc4de2e60610f7aae"
