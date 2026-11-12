@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 16:54:58",
+  "updated_at": "2026-11-12 16:59:57",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -48,6 +48,18 @@
       ],
       "sha256": {
         "SKILL.md": "ae3f9ba36edd89fb6ff68f809ac841fe0f632ba6e4cd8e2993a10279f68274bb"
+      }
+    },
+    {
+      "name": "skill-publisher",
+      "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /​.well-known/skills 分发（static-deploy，端口 8088）；覆盖编写规范、发布三步、版本纪律与 skillctl 升级段模板。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 16:59:31",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "2769a2f7a8d6bce944c154f03cfcc499dd749bb4d3f00ed4e1b56f71590c386f"
       }
     },
     {
