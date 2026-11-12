@@ -384,6 +384,13 @@ class RegistryCase(unittest.TestCase):
         self.assertIn("绝对路径", proc.stderr)
 
     def test_13_bootstrap_basic_success_and_self_execution(self) -> None:
+        # 对抗性测试 ①：干净目录 bootstrap 默认装齐两个技能
+        self.upsert(
+            "skill-distribution",
+            "1.0.0",
+            {"SKILL.md": b"# skill-distribution\n"},
+            description="distribution skill",
+        )
         self.upsert(
             "skill-publisher",
             "1.0.0",
@@ -393,9 +400,11 @@ class RegistryCase(unittest.TestCase):
         self.upsert("alpha", "1.0.0", {"SKILL.md": b"# alpha\n"})
         proc = self.cli("bootstrap", "--to", str(self.to))
         self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("已安装 skill-distribution 1.0.0", proc.stdout)
         self.assertIn("已安装 skill-publisher 1.0.0", proc.stdout)
-        # 默认只安装 skill-publisher，不装 alpha
+        # 默认只安装 skill-distribution 与 skill-publisher，不装 alpha
         self.assertFalse((self.to / "alpha").exists())
+        self.assertTrue((self.to / "skill-distribution" / "SKILL.md").exists())
         self.assertTrue((self.to / "skill-publisher" / "SKILL.md").exists())
 
         # 检查自身副本
@@ -407,8 +416,11 @@ class RegistryCase(unittest.TestCase):
         self.assertTrue(bool(st.st_mode & 0o111))
 
         # 检查 3 行中文后续指引
-        guide_file = self.to / "skill-publisher" / "SKILL.md"
-        self.assertIn(f"1. 读 {guide_file} 了解怎么创建/发布技能", proc.stdout)
+        guide_file = self.to / "skill-distribution" / "SKILL.md"
+        self.assertIn(
+            f"1. 读 {guide_file} 了解 skillctl 的完整用法（装/升级技能）与 skill-publisher（创建/发布新技能）",
+            proc.stdout,
+        )
         self.assertIn("2. 日常用本目录 .skillctl/skillctl.py list/update", proc.stdout)
         self.assertIn("3. update 默认只检测，--apply 才升级", proc.stdout)
 
@@ -421,33 +433,45 @@ class RegistryCase(unittest.TestCase):
             timeout=10,
         )
         self.assertEqual(sub_proc.returncode, 0, sub_proc.stderr)
+        self.assertIn("skill-distribution  1.0.0", sub_proc.stdout)
         self.assertIn("skill-publisher  1.0.0", sub_proc.stdout)
         self.assertIn("本地 1.0.0  一致", sub_proc.stdout)
+        alpha_lines = [line for line in sub_proc.stdout.splitlines() if line.startswith("alpha  ")]
+        self.assertEqual(len(alpha_lines), 1)
+        self.assertNotIn("本地", alpha_lines[0])
 
     def test_14_bootstrap_skip_already_installed(self) -> None:
-        # 对抗性测试 ②：skill-publisher 已安装（跳过不覆盖）
-        self.upsert("skill-publisher", "1.0.0", {"SKILL.md": b"# original\n"})
+        # 对抗性测试 ②：重复执行两个都跳过（不覆盖已有文件）
+        self.upsert("skill-distribution", "1.0.0", {"SKILL.md": b"# dist original\n"})
+        self.upsert("skill-publisher", "1.0.0", {"SKILL.md": b"# pub original\n"})
         first = self.cli("bootstrap", "--to", str(self.to))
         self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertIn("已安装 skill-distribution", first.stdout)
         self.assertIn("已安装 skill-publisher", first.stdout)
 
         # 修改本地内容模拟已有修改
+        dist_file = self.to / "skill-distribution" / "SKILL.md"
         pub_file = self.to / "skill-publisher" / "SKILL.md"
-        pub_file.write_bytes(b"# custom-not-overwritten\n")
+        dist_file.write_bytes(b"# dist-custom-not-overwritten\n")
+        pub_file.write_bytes(b"# pub-custom-not-overwritten\n")
 
         second = self.cli("bootstrap", "--to", str(self.to))
         self.assertEqual(second.returncode, 0, second.stderr)
-        self.assertIn("已跳过 skill-publisher", second.stdout)
-        self.assertIn("已安装", second.stdout)
+        self.assertIn("已跳过 skill-distribution 1.0.0（已安装）", second.stdout)
+        self.assertIn("已跳过 skill-publisher 1.0.0（已安装）", second.stdout)
         # 验证文件未被覆盖
-        self.assertEqual(pub_file.read_bytes(), b"# custom-not-overwritten\n")
+        self.assertEqual(dist_file.read_bytes(), b"# dist-custom-not-overwritten\n")
+        self.assertEqual(pub_file.read_bytes(), b"# pub-custom-not-overwritten\n")
         # 验证 3 行后续指引仍完整输出
-        self.assertIn(f"1. 读 {pub_file} 了解怎么创建/发布技能", second.stdout)
+        self.assertIn(
+            f"1. 读 {dist_file} 了解 skillctl 的完整用法（装/升级技能）与 skill-publisher（创建/发布新技能）",
+            second.stdout,
+        )
         self.assertIn("2. 日常用本目录 .skillctl/skillctl.py list/update", second.stdout)
         self.assertIn("3. update 默认只检测，--apply 才升级", second.stdout)
 
     def test_15_bootstrap_relative_to_and_missing_to_rejected(self) -> None:
-        # 对抗性测试 ①：<to> 为相对路径/不存在（应报错要求绝对路径）
+        # <to> 为相对路径/不存在（应报错要求绝对路径）
         proc_rel = self.cli("bootstrap", "--to", "relative_skills")
         self.assertNotEqual(proc_rel.returncode, 0)
         self.assertIn("需要绝对路径", proc_rel.stderr)
@@ -456,32 +480,64 @@ class RegistryCase(unittest.TestCase):
         self.assertNotEqual(proc_no_to.returncode, 0)
 
     def test_16_bootstrap_unreachable_index(self) -> None:
-        # 对抗性测试 ③：index.json 不可达（非 0 退出、错误清晰）
+        # index.json 不可达（非 0 退出、错误清晰）
         self.state["index_status"] = 404
         proc = self.cli("bootstrap", "--to", str(self.to))
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("注册表不可达", proc.stderr)
         self.assertIn("404", proc.stderr)
-        self.assertNotIn("了解怎么创建/发布技能", proc.stdout)
+        self.assertEqual(proc.stdout, "")
 
     def test_17_bootstrap_all_flag(self) -> None:
+        # 对抗性测试 ③：--all 与默认集行为区分
+        self.upsert("skill-distribution", "1.0.0", {"SKILL.md": b"# distribution\n"})
         self.upsert("skill-publisher", "1.0.0", {"SKILL.md": b"# publisher\n"})
         self.upsert("alpha", "1.0.0", {"SKILL.md": b"# alpha\n"})
         self.upsert("beta", "2.0.0", {"SKILL.md": b"# beta\n"})
-        proc = self.cli("bootstrap", "--to", str(self.to), "--all")
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("已安装 skill-publisher", proc.stdout)
-        self.assertIn("已安装 alpha", proc.stdout)
-        self.assertIn("已安装 beta", proc.stdout)
+
+        default_proc = self.cli("bootstrap", "--to", str(self.to))
+        self.assertEqual(default_proc.returncode, 0, default_proc.stderr)
+        self.assertTrue((self.to / "skill-distribution" / "SKILL.md").exists())
+        self.assertTrue((self.to / "skill-publisher" / "SKILL.md").exists())
+        self.assertFalse((self.to / "alpha").exists())
+        self.assertFalse((self.to / "beta").exists())
+
+        all_proc = self.cli("bootstrap", "--to", str(self.to), "--all")
+        self.assertEqual(all_proc.returncode, 0, all_proc.stderr)
+        self.assertIn("已跳过 skill-distribution 1.0.0（已安装）", all_proc.stdout)
+        self.assertIn("已跳过 skill-publisher 1.0.0（已安装）", all_proc.stdout)
+        self.assertIn("已安装 alpha 1.0.0", all_proc.stdout)
+        self.assertIn("已安装 beta 2.0.0", all_proc.stdout)
         self.assertTrue((self.to / "alpha" / "SKILL.md").exists())
         self.assertTrue((self.to / "beta" / "SKILL.md").exists())
-        self.assertTrue((self.to / "skill-publisher" / "SKILL.md").exists())
 
-    def test_18_bootstrap_missing_publisher_in_registry_rejected(self) -> None:
+    def test_18_bootstrap_missing_default_skill_in_registry_rejected(self) -> None:
         self.upsert("alpha", "1.0.0", {"SKILL.md": b"# alpha\n"})
+        self.upsert("skill-publisher", "1.0.0", {"SKILL.md": b"# publisher\n"})
         proc = self.cli("bootstrap", "--to", str(self.to))
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("注册表中没有技能: skill-publisher", proc.stderr)
+        self.assertIn("注册表中没有技能: skill-distribution", proc.stderr)
+        self.assertFalse((self.to / "skill-publisher").exists())
+
+        self.catalog = []
+        self.upsert("alpha", "1.0.0", {"SKILL.md": b"# alpha\n"})
+        self.upsert("skill-distribution", "1.0.0", {"SKILL.md": b"# distribution\n"})
+        proc2 = self.cli("bootstrap", "--to", str(self.to))
+        self.assertNotEqual(proc2.returncode, 0)
+        self.assertIn("注册表中没有技能: skill-publisher", proc2.stderr)
+        self.assertFalse((self.to / "skill-distribution").exists())
+
+    def test_19_bootstrap_partial_skip_installs_missing_default(self) -> None:
+        self.upsert("skill-distribution", "1.0.0", {"SKILL.md": b"# distribution\n"})
+        self.upsert("skill-publisher", "1.0.0", {"SKILL.md": b"# publisher\n"})
+        pre = self.cli("install", "skill-publisher", "--to", str(self.to))
+        self.assertEqual(pre.returncode, 0, pre.stderr)
+
+        proc = self.cli("bootstrap", "--to", str(self.to))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("已安装 skill-distribution 1.0.0", proc.stdout)
+        self.assertIn("已跳过 skill-publisher 1.0.0（已安装）", proc.stdout)
+        self.assertTrue((self.to / "skill-distribution" / "SKILL.md").exists())
 
 
 class TestUnreachable(unittest.TestCase):

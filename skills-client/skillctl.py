@@ -782,6 +782,9 @@ def _copy_self_to_bootstrap(root: Path) -> Path:
     return dest
 
 
+BOOTSTRAP_DEFAULT_SKILLS = ("skill-distribution", "skill-publisher")
+
+
 def cmd_bootstrap(index_url: str, timeout: float, to: str, install_all: bool) -> int:
     root = require_abs_dir(to, create=True)
     _copy_self_to_bootstrap(root)
@@ -790,7 +793,7 @@ def cmd_bootstrap(index_url: str, timeout: float, to: str, install_all: bool) ->
     if install_all:
         target_skills = skills
     else:
-        target_skills = [_find_skill(skills, "skill-publisher")]
+        target_skills = [_find_skill(skills, name) for name in BOOTSTRAP_DEFAULT_SKILLS]
 
     for skill in target_skills:
         name = skill["name"]
@@ -805,8 +808,8 @@ def cmd_bootstrap(index_url: str, timeout: float, to: str, install_all: bool) ->
         final = install_verified(dest, skill, index_url, timeout, backup_version=None)
         print(f"已安装 {name} {skill['version']} {final}")
 
-    guide_path = root / "skill-publisher" / "SKILL.md"
-    print(f"1. 读 {guide_path} 了解怎么创建/发布技能")
+    guide_path = root / "skill-distribution" / "SKILL.md"
+    print(f"1. 读 {guide_path} 了解 skillctl 的完整用法（装/升级技能）与 skill-publisher（创建/发布新技能）")
     print("2. 日常用本目录 .skillctl/skillctl.py list/update")
     print("3. update 默认只检测，--apply 才升级")
     return 0
@@ -866,7 +869,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     bootstrap_cmd = sub.add_parser("bootstrap", help="一键自举客户端与基础技能")
     bootstrap_cmd.add_argument("--to", required=True, help="技能根目录的绝对路径")
-    bootstrap_cmd.add_argument("--all", action="store_true", help="安装注册表全部技能（默认仅 skill-publisher）")
+    bootstrap_cmd.add_argument("--all", action="store_true", help="安装注册表全部技能（默认安装 skill-distribution 与 skill-publisher）")
     return parser
 
 
