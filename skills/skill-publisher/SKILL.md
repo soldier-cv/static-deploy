@@ -1,7 +1,7 @@
 ---
 name: skill-publisher
 description: Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /​.well-known/skills 分发（static-deploy，端口 8088）；覆盖编写规范、发布三步、版本纪律与 skillctl 升级段模板。
-version: 1.0.0
+version: 1.1.0
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -11,6 +11,8 @@ metadata:
 ---
 
 # 技能发布规范：写一个通用技能并发布到 /.well-known/skills
+
+> 版本记录：1.1.0 新增版本纪律（禁与服务版本对齐跳号、major 要克制、版本记录注记）；1.0.0 首发编写规范与发布三步。
 
 本技能是**发布端**的规范；**安装/升级端**是 skillctl（http://100.64.0.88:8088/.well-known/skillctl.py）。
 凡是「这个技能/文档要让其它机器上的 agent（OpenCode、Claude Code 等）也能装」的场景，都按本规范发布。
@@ -30,6 +32,12 @@ curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chm
 ```
 
 版本语义：`patch` 修错别字不改结论；`minor` 新增章节/接口；`major` 推翻既有结论（需重读全文）。
+
+**版本纪律（华总 2026-11-12 定案，违反 = 打回）：**
+- 技能版本**只反映技能内容本身的变更幅度**，禁止与外部服务版本对齐跳号（resource-mgr 技能曾因「跟服务大版本对齐」从 1.1.0 连跳 4.0.0，错误做法，已废弃）。
+- 大版本要克制：`major` 仅当技能的核心结论/命令被推翻、读者必须重读全文时才允许；普通增改一律 minor/patch。
+- 每次版本变更在文首「版本记录」注记一行（版本号 + 一句话改了什么），让人不看 diff 也能判断要不要重读。
+- 禁止用 `patch` 夹带行为变更（消费方按 patch 自动升级会静默踩坑）。
 
 ## 一、编写规范
 
