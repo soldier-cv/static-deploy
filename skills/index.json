@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 16:59:57",
+  "updated_at": "2026-11-12 17:44:55",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -48,6 +48,18 @@
       ],
       "sha256": {
         "SKILL.md": "ae3f9ba36edd89fb6ff68f809ac841fe0f632ba6e4cd8e2993a10279f68274bb"
+      }
+    },
+    {
+      "name": "skill-distribution",
+      "description": "Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-12 17:44:55",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "0b5111ed5e78e190f41c71ad8c8968fdb8421884302dc7a7935a1de32df0bb33"
       }
     },
     {
