@@ -2,7 +2,7 @@
 name: skill-distribution
 description: Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。
 tags: [skill, distribution, static-deploy, skillctl]
-version: 1.0.0
+version: 1.0.1
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -12,6 +12,15 @@ metadata:
 ---
 
 # 技能分发：发布端 + 安装升级端（skillctl）
+
+## 快速接入（一行，agent 执行这一条即可完成全部自举）
+
+```bash
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py | python3 - bootstrap --to <本agent的技能目录绝对路径>
+```
+
+执行后本技能与 skill-publisher 已装到技能目录、skillctl 副本已自举到 `<技能目录>/.skillctl/skillctl.py`；
+之后所有用法（升级、装其它技能、发布新技能）都在本文件下文，无需再找任何文档。
 
 ## When to Use
 
@@ -47,6 +56,11 @@ bootstrap 会：自装 skillctl 副本到 `<技能目录>/.skillctl/skillctl.py`
 
 - `--to` 只接受**绝对路径**，相对路径直接被拒。
 - 新技能的升级段落一律复制 skill-publisher 里的 skillctl 统一段，**禁止自造 curl 单文件升级命令**（历史上四个技能各写各的，已统一清理过一次；改动分发技能内容时顺手检查有没有旧式 curl 升级残留）。
+
+## 交付纪律（华总定案）
+
+- 给外部 agent 的任何机制，**交付形态 = 一行接入命令 + 用法全部写进技能文档**：agent 只会被给一条可粘贴的命令，后续怎么调用、怎么升级必须能在装好的 SKILL.md 里自己读到，不许依赖聊天记录或人转述。新机制落地时问自己一句「agent 装完这条命令后，不看聊天还知道怎么用吗」，不知道就把用法补进技能再交付。
+- 改 bootstrap 默认安装集这类「一行命令的承诺」必须与技能文档同步——文档写了 bootstrap 装什么，代码就得真的装什么（文档与实现漂移会让 agent 按文档操作失败）。
 
 ## 硬约束
 
