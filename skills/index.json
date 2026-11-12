@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 20:02:58",
+  "updated_at": "2026-11-12 20:45:54",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -8,14 +8,14 @@
       "name": "api-testing-toolkit",
       "description": "Use when 前端未就绪时要由 AI 驱动接口测试：为项目初始化接口测试包（tools/api-testing 脚手架、鉴权链、docs 参考），或在已初始化项目里跑回归/冒烟/story 测试、造数验证、探索新接口、缺陷定位与修复闭环。触发词：接口测试、测试包初始化、跑回归、跑冒烟、story 测试、造数验证、tools/api-testing。",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:02:45",
+      "updated_at": "2026-11-12 20:35:16",
       "files": [
         "SKILL.md",
         "references/scaffold-mcp-server.md",
         "references/scaffold-project.md"
       ],
       "sha256": {
-        "SKILL.md": "dd9e4f6dbea5188461736f6e2b47504693869a13ee29fa0bdbe6f697c85a2bcc",
+        "SKILL.md": "35dd055ed4d6cd6fe13dfa22eeadb3eb2e2594a07a0c38cee6b9ccede230e027",
         "references/scaffold-mcp-server.md": "f20e8955207065557ce56af2754cb092239432148ca41b8262785267a060b66b",
         "references/scaffold-project.md": "1afa9167e64e095850d88d4e83015f9304d81182422d5082872292bf6f5c66d2"
       }
@@ -23,8 +23,8 @@
     {
       "name": "desktop-release-ci-playbook",
       "description": "桌面应用发版 CI 全链路：Tauri 打包签名、latest.json/自动更新、GitHub→Gitee 双通道镜像、Woodpecker compose 部署流水线的可用写法与踩坑表（任何 agent 可安装）",
-      "version": "1.1.1",
-      "updated_at": "2026-11-12 16:54:44",
+      "version": "1.2.0",
+      "updated_at": "2026-11-12 20:45:51",
       "files": [
         "SKILL.md",
         "references/gitee-mirror.md",
@@ -32,7 +32,7 @@
         "references/woodpecker-compose.md"
       ],
       "sha256": {
-        "SKILL.md": "ebc1bc21fca8400b0276ee4c756367456dff0e188f7c6014db6b584c6245d760",
+        "SKILL.md": "d7672e181f194eb18c32a2320560588aab332cd7c3f0b36e19994dcf44e8468d",
         "references/gitee-mirror.md": "f801241544ababbd25b11e7529675dc9b3b649537f3e022f82dd7963a61038a8",
         "references/github-actions.md": "6e851cb1ba1ec643b8d37e580aa7b6f73202720cf7f2bd20f7c5ac593b47287d",
         "references/woodpecker-compose.md": "7a8f47483a36daad426127e77d1b9966b3ef58a20251a2662cd49843cd9bbd57"
@@ -41,20 +41,20 @@
     {
       "name": "frontend-review",
       "description": "Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。",
-      "version": "1.0.0",
-      "updated_at": "2026-11-12 18:43:13",
+      "version": "1.1.0",
+      "updated_at": "2026-11-12 20:41:33",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "5c644424cd0b3e10390ba5f73c8b2c56c57d34aefb89d160571a3f8e61596e00"
+        "SKILL.md": "9a6d44dd2e4b025762d48d64c0a7d1e747c038f977e7e3396baf96b4ab589ad1"
       }
     },
     {
       "name": "hearthbox",
       "description": "Hearthbox（炉边）自制游戏平台的全部工作：写游戏、设计玩法、改平台本体。当用户提到炉边、hearthbox、要写一个能上这个平台的游戏、要给游戏加金手指/设置项/成就、要改平台的运行时或壳、或者问这个平台怎么用、游戏怎么上架时使用。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:02:46",
+      "updated_at": "2026-11-12 20:44:32",
       "files": [
         "SKILL.md",
         "references/game-design.md",
@@ -62,10 +62,74 @@
         "references/platform.md"
       ],
       "sha256": {
-        "SKILL.md": "0e0c65752e098f99f66deb25a5275008ea0af59d9b94fbdaad3d978d43805ca3",
+        "SKILL.md": "d718c44b7f663bc47f31f25d32870146b0c9c5fdd243e7b6fd009e493503ac1a",
         "references/game-design.md": "a487b3d530875fa8719826dbf2994dc540633e173ec6daa7496b78c9ac077079",
         "references/game-dev.md": "5e04a005064df3f38d47a7f2c88fa57d8a6b5c9774975661c6cd6a2f22d48d05",
         "references/platform.md": "5b1310cffb69067354da0580857f48eacada344bb9a20f0f8518e47900e4a0ab"
+      }
+    },
+    {
+      "name": "logo-design",
+      "description": "Professional logo and brand-mark design, from brief to production files. Guides discovery and the design brief, concept generation, choosing a mark type (wordmark, monogram, letterform, pictorial, abstract, emblem, mascot, combination), building clean geometric SVG logos, optical refinement, colour and typography, testing (16 px, one-colour, reversed, shelf test), client presentation, delivery variants and brand guidelines. Includes a searchable library of 1,400+ real-world SVG logos classified by type, technique, geometry and industry, plus scripts that audit SVGs and generate test sheets, presentation boards and export variants. Use this skill whenever the user wants a logo, logotype, wordmark, monogram, brand mark, symbol, app icon or favicon designed, redesigned, refreshed, critiqued or compared; asks for logo ideas or concepts; needs a design brief, logo guidelines, lockups or an identity system; or mentions branding a new company, product, app or project — even if they don't say the word \"logo\".",
+      "version": "0.0.0",
+      "updated_at": "2026-11-12 20:45:54",
+      "files": [
+        "SKILL.md",
+        "references/color.md",
+        "references/critique.md",
+        "references/discovery-brief.md",
+        "references/identity-system.md",
+        "references/library-guide.md",
+        "references/library-note.md",
+        "references/mark-types.md",
+        "references/presentation-delivery.md",
+        "references/principles.md",
+        "references/process.md",
+        "references/redesign.md",
+        "references/svg-construction.md",
+        "references/testing-checklist.md",
+        "references/typography.md",
+        "references/visual-techniques.md",
+        "scripts/build_catalog.py",
+        "scripts/concept_sheet.py",
+        "scripts/export_variants.py",
+        "scripts/presentation_board.py",
+        "scripts/preview_sheet.py",
+        "scripts/render_png.py",
+        "scripts/search_library.py",
+        "scripts/svg_audit.py",
+        "scripts/svglib.py",
+        "templates/brand-guidelines-template.md",
+        "templates/presentation-spec.example.json"
+      ],
+      "sha256": {
+        "SKILL.md": "65ec4bd58732e8cc11e244724e8666de78764b973f6d3b03b233904639cf47c6",
+        "references/color.md": "d1118d401b9ada111ba2402fe55035118780c928fd8be616b0a4940dc0d65299",
+        "references/critique.md": "fcddb803542c21adcc13cfdc0c9f399de377ff931173898a2ed6c114585ced0b",
+        "references/discovery-brief.md": "2a5713518116765d673fe1a753843db24c9849d6a1eb678c6209120d8bb032da",
+        "references/identity-system.md": "1b0c800f5b85cb727d284d51c42c5783934638ee6585c989740c1ead0ffefdfa",
+        "references/library-guide.md": "2d7dbba98115b695607402a4f36152d4d170eba4345030580a0829037025e9aa",
+        "references/library-note.md": "873ab4a8b64fa90935fc195f03423fe915c0d9f37451fd8fdcdb6a56472fcc8f",
+        "references/mark-types.md": "8b3d994165bff278ba8df93a11544df731d8ee8c01b191c123c79fb996815ec3",
+        "references/presentation-delivery.md": "b004fe0833942e94249e511f3b04de6ccde7e5cb7a1245b9c3ecd2da3abe4244",
+        "references/principles.md": "6c60bb73fb977361f42e80f51f61a58c3f4bd1c69ace56f4fdbcbd743a4b74aa",
+        "references/process.md": "6687f8820eeff041411272c74507bf91084d6198a6835605e76d9c25dd2deb7f",
+        "references/redesign.md": "99ad53dd73d4754ff74e0caef178a924c877901eb6ec4aae4a1a7d3a4c219c07",
+        "references/svg-construction.md": "6ae70e4a5ea4e045a8f9be55a6052b0841d6221dc8fbebd7e39bd86425789afb",
+        "references/testing-checklist.md": "23a8a6a58f0bab759a2dd1d72700aff5c24fa3fc99fd382c3fb5d2603b504bf9",
+        "references/typography.md": "f6373a47336a5bb6a2ab88993868f7ab74ab158b21635ec422ba8fd30541f19c",
+        "references/visual-techniques.md": "af420957e1750e9ca0c01c4d0ad9c8d3458ad53ef3581dac956c14a15f883197",
+        "scripts/build_catalog.py": "cd7964f2e69410b468d2271e3cbda988e9dcb05be1cda2e1055ae4301ff75fd3",
+        "scripts/concept_sheet.py": "b7fe519c276f9f161fb1d8a96e5b320724c15309f7a446fd64722ab5cefeab3b",
+        "scripts/export_variants.py": "2c57ab378db8e4bc323b9627da6628c28a332d73b420632e07eecf7236719046",
+        "scripts/presentation_board.py": "f0939ed40ce800f85ef54c4934d5da78f01987e63a42650c482808cc35d5049c",
+        "scripts/preview_sheet.py": "ef1b6b8dac1d41c7db2b52a43b939ba73bc006a3c27a97845eb1db215e5bcd7b",
+        "scripts/render_png.py": "f6083837ff3edf4c6006ce119d379b3ac0fcd7cd6db07b99b613e0060bd43c21",
+        "scripts/search_library.py": "da5e0b0a87678c92d055ff98721df04d327ca8d24ee03a8efbf56fdaa87c66e1",
+        "scripts/svg_audit.py": "b002c9dd6a26f80a5dfd4a4b48ace172edc4b13229e09e7e17fa4a4d07c0bde0",
+        "scripts/svglib.py": "18cfab3bfde4a94a1bcae27a96bcc7b99fa1320e344ebf8a9cb914347247261c",
+        "templates/brand-guidelines-template.md": "277d8dc564276d1e88edf0ace8e9216191807dbc78a2b7a392d15e5dfeb55cee",
+        "templates/presentation-spec.example.json": "0f881428ab30c527fc03b47f54a9bca8f68ee5d10515c9abee47d97fa69483d7"
       }
     },
     {
@@ -99,8 +163,8 @@
     {
       "name": "selfapp",
       "description": "Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。",
-      "version": "1.0.0",
-      "updated_at": "2026-11-12 20:02:47",
+      "version": "1.1.0",
+      "updated_at": "2026-11-12 20:38:29",
       "files": [
         "SKILL.md",
         "references/database-patterns.md",
@@ -112,21 +176,21 @@
         "references/templates.md"
       ],
       "sha256": {
-        "SKILL.md": "61dd9ce4f2c56e40f4f25b4de59be44c966dec1f86a418ba6732ad220d9d7f87",
+        "SKILL.md": "8d3bacc215dc08b38cd114bce2cef570209056c86de242c5c2ce13f11021f563",
         "references/database-patterns.md": "d95ef172dbdc0bc80955a5ccbaf81f6f86f62bca87da710eb9ab78cc79eecaf0",
         "references/env-schema.md": "1559a4ca50248f01aa776a078726e2a7fdeee6e22bb17016790009ec32ee137f",
         "references/idor-guard.md": "f26113e09c0b612b750689ce609f17add0c58061b4b882065816d7ddb88eaae4",
         "references/init-selfapp.md": "97eb1b45d0b89e948b80058012791068e2ee6d48c4864ee139f97e38f230d48a",
         "references/logger-middleware.md": "77726609bb1ec2ec05fc1c1101c545f594f891c9395e9dbbb9a8f00a38b736eb",
         "references/sliding-rate-limiter.md": "e666a4663238df6c5cda446b5ad61d0fba2811d8c78990de9bee9ae3ef014bf1",
-        "references/templates.md": "4e0759445074d9273f2b4b3d214e8db50f8471021e7839d396d6fad3d3e0db75"
+        "references/templates.md": "121d5a074bc6e90638dacfb35478c9043c2849dd44849dd4c6ae66396b3d0ca2"
       }
     },
     {
       "name": "server-88-deploy",
       "description": "Standard operating procedure and automation for deploying services on LAN server 88 (100.64.0.88). Use whenever deploying, updating, inspecting, or managing containers or services on server 88, or working with /opt/deploy and /data paths.",
-      "version": "1.0.0",
-      "updated_at": "2026-11-12 20:02:48",
+      "version": "1.1.0",
+      "updated_at": "2026-11-12 20:42:47",
       "files": [
         "SKILL.md",
         "references/compose-template.md",
@@ -134,7 +198,7 @@
         "references/operations-template.md"
       ],
       "sha256": {
-        "SKILL.md": "9e922fecf210a4747615f12983521f25d2cffeed6513692df5384e4db2d2e5a9",
+        "SKILL.md": "f919cb44ee5744fc3c7b2da8ecf0e18c0b9d331426b79421a00d00fc72216b91",
         "references/compose-template.md": "9cc30440c8af9ffd2f3ebad090995b9d68bf8fe017ef9d1160deacbd1faac0a4",
         "references/deploy-helper.md": "8a5ce66b9914ee0fd90c84a3eec65a600be989a6020be1fcde07f7ba317affd6",
         "references/operations-template.md": "a045344746f877537b54198482bc7161f6dfd97d9f1629d9c647fe30409ed3b5"
@@ -167,8 +231,8 @@
     {
       "name": "static-deploy-mcp",
       "description": "把原型/HTML/图片发布到服务器并拿到可访问链接：何时该调、接入配置、通道选择、常用套路、排障（任何 MCP 客户端通用）",
-      "version": "2.0.1",
-      "updated_at": "2026-11-12 16:54:44",
+      "version": "2.1.0",
+      "updated_at": "2026-11-12 20:45:08",
       "files": [
         "SKILL.md",
         "references/config-snippet.md",
@@ -176,7 +240,7 @@
         "references/troubleshooting.md"
       ],
       "sha256": {
-        "SKILL.md": "fac509386152ee7180bbc4548e9d102dc5c31ed84994826bf6851238a54b258f",
+        "SKILL.md": "dded33e56a521423544bb92753ca3fad7abf9c6b292ae7750b6cae430d1ba670",
         "references/config-snippet.md": "f6063fa063d7c53fd3f3e0873f8f38bdf6dbb27d1f4c8f189ce650356abfd52a",
         "references/publish-patterns.md": "f69f9114911fc19e932f7d5ee1f7087bd984081402e539d3baa4b618986058ff",
         "references/troubleshooting.md": "6306396f6ed7caa5bb0ca2f5944a40115ad37bc60206d41fc4de2e60610f7aae"
@@ -186,7 +250,7 @@
       "name": "ui-diff",
       "description": "Use when 需要跨平台 UI 截图比对：抓取预期与实际画面、逐页分类差异并给出验收结论，覆盖桌面 Web/Tauri、Android 应用与微信小程序。触发词：screenshot compare、prototype vs app、UI acceptance、visual regression、页面验收、Android/小程序页面对比、/ui-diff。",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:02:49",
+      "updated_at": "2026-11-12 20:39:29",
       "files": [
         "SKILL.md",
         "references/capture-examples.md",
@@ -197,7 +261,7 @@
         "references/severity-rubric.md"
       ],
       "sha256": {
-        "SKILL.md": "770d1ef892fd7b49cc1c35ec0ebe4554a43c83a5af1f44c50be19462c1ffd611",
+        "SKILL.md": "c100537c135845def096be614cf6560bb2e32ba71d4dc073a5d970a6ecbe3018",
         "references/capture-examples.md": "4691ae34679ef2bc1f5768b0bd6c3a03df69873186b5e37d0206ea9bec9c303c",
         "references/capture-web.md": "3aac48b34f55104590b55f6d76fadf2ad485746530bf4360c39a444c87792a8b",
         "references/compare-prompt.md": "07b9d605a4af1304dbd189a6fcd20ad701d372ba5b24a5ef6c74e6a30066baff",
@@ -210,7 +274,7 @@
       "name": "webapp-testing",
       "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:02:50",
+      "updated_at": "2026-11-12 20:40:41",
       "files": [
         "SKILL.md",
         "references/examples.md",
@@ -218,7 +282,7 @@
         "references/with-server.md"
       ],
       "sha256": {
-        "SKILL.md": "d6e535e2d83d152d9786a46300c514a6011e3202861e17d7b7f1fe8c360a2a17",
+        "SKILL.md": "c664fc2d092072ccd09ccca8c0597b848022e182ddc48fd23f1072fe34f88762",
         "references/examples.md": "0c2ad883faff4d316dd9330358adf7284202f6423f676077e32acfe8f6d944c5",
         "references/license.md": "d314487ae6398b2c4df0aa207e3b4432817da511d239d5189d71d4acaa691c22",
         "references/with-server.md": "579da75abb0baf7dfb1207f8393a3f839f827a1cd1703e46ab023815f7cd96ac"
