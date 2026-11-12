@@ -51,6 +51,17 @@ print('files:', ', '.join(s['files']))
 
 **升级到最新版**（覆盖本地副本，含 references）：
 
+通用客户端（推荐，任意硬件/任意 CLI agent 可用）：
+
+```bash
+curl -fsSL http://100.64.0.88:8088/.well-known/skillctl.py -o skillctl.py && chmod +x skillctl.py
+./skillctl.py list                                  # 看注册表有什么、本地装到哪版
+./skillctl.py install project-repo-standards --to <你的技能目录>
+./skillctl.py update --to <你的技能目录> [--apply]   # 默认只检测，--apply 才升级
+```
+
+或按下面的逐文件 curl 方式：
+
 ```bash
 BASE=http://100.64.0.88:8088/.well-known/skills/project-repo-standards
 DEST=<你的技能目录>/project-repo-standards

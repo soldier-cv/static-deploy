@@ -16,6 +16,7 @@ services:
       - ../mcp:/usr/share/nginx/html/docs:ro
       - ../client-mcp:/usr/share/nginx/html/client:ro
       - ../skills:/srv/skills:ro
+      - ../skills-client:/srv/skills-client:ro
       # resource-mgr 技能真源在项目仓库里，../skills/resource-mgr 是指向它的符号链接；
       # 容器内必须能解析到同一个绝对路径，否则 nginx 读不到文件（404）。
       # 挂仓库根而不是 skills/resource-mgr：git 操作（rebase/checkout）会删掉并重建
