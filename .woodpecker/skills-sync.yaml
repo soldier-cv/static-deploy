@@ -89,6 +89,8 @@ steps:
       - |
         # 分发端部署由另一并行 workflow (sync-and-restart) 完成，会重启 8088 容器：
         # 重试窗口须覆盖部署期（约数分钟）
+        # CI 容器继承全局代理 env，wget 访问 172.17.0.1 会被代理劫持，必须清掉
+        unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
         for i in $(seq 1 20); do
           JSON=$(wget -q --timeout=10 -O- http://172.17.0.1:8088/.well-known/skills/index.json) && break
           sleep 15
