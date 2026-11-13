@@ -8,6 +8,10 @@
     python3 sync_index.py            # 重写 index.json
     python3 sync_index.py --check    # 只校验 index.json 是否与磁盘一致，不写盘
 
+排除机制:
+    本地保留、不进分发范围的技能写在 EXCLUDE_SKILLS 里（或用 --exclude 追加）。
+    排除只影响 index.json 的生成，不删除、不移动本地技能目录。
+
 退出码: 0 = 一致/已写入；1 = --check 下发现不一致
 """
 import hashlib
@@ -20,6 +24,8 @@ from datetime import datetime, timedelta, timezone
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(ROOT, "index.json")
 CST = timezone(timedelta(hours=8))
+# 本地工具技能：保留在 skills/ 供本机使用，但不进分发包
+EXCLUDE_SKILLS = {"skill-publisher"}
 ALLOWED_SUBDIRS = ("references", "scripts", "assets", "templates")
 ALLOWED_FILE_RE = re.compile(
     r"^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:md|py|sh|js|ps1|yaml|yml|json|txt|toml|bat|cmd)$"
@@ -79,6 +85,13 @@ def collect(skill_dir):
 
 def main():
     check_only = "--check" in sys.argv
+    excluded = set(EXCLUDE_SKILLS)
+    argv = sys.argv[1:]
+    for i, arg in enumerate(argv):
+        if arg == "--exclude" and i + 1 < len(argv):
+            excluded.add(argv[i + 1])
+        elif arg.startswith("--exclude="):
+            excluded.add(arg.split("=", 1)[1])
 
     old = {}
     if os.path.isfile(INDEX):
@@ -91,7 +104,7 @@ def main():
     skills = []
     for entry in sorted(os.listdir(ROOT)):
         path = os.path.join(ROOT, entry)
-        if not os.path.isdir(path) or entry.startswith("."):
+        if not os.path.isdir(path) or entry.startswith(".") or entry in excluded:
             continue
         item = collect(path)
         if not item:

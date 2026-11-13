@@ -7,7 +7,7 @@
 
 ```javascript
 /**
- * Web / file:// capture helper for ui-diff.
+ * Web / file:// capture helper for ui-acceptance.
  *
  * Usage (via playwright-skill run.js recommended):
  *   node run.js <this-file>

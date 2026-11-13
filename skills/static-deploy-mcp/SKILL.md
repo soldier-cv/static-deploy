@@ -1,23 +1,22 @@
 ---
 name: static-deploy-mcp
 description: Use when 用户要把原型 / HTML / 截图 / 图片 / 静态文件发布到服务器并拿到一个可访问链接，或抱怨「手机上打不开你生成的东西 / 只看得到本地路径」。触发词：static-deploy、发布原型、上传图片、手机预览、deploy_static_project、upload_image。
-version: 2.1.0
+version: 2.1.1
 author: Hermes coding agent
 license: MIT
 metadata:
   hermes:
     tags: [mcp, static-deploy, prototype, upload, sharing]
-    related_skills: [server-88-deploy, frontend-review, ui-diff]
+    related_skills: [server-88-deploy, ui-acceptance]
 ---
 
 # static-deploy 原型与图片分发 MCP
 
-> 版本记录：2.1.0 整合上传技能去重，互链 server-88-deploy（服务宿主与容器运维）与 ui-diff/frontend-review；规范升级段移至文末；2.0.1 升级段落统一走 skillctl。
+> 版本记录：2.1.1 技能收拢：frontend-review 与 ui-diff 合并为 ui-acceptance，更新互链（2026-11-13）；2.1.0 整合上传技能去重，互链 server-88-deploy（服务宿主与容器运维）与 ui-diff/frontend-review；规范升级段移至文末；2.0.1 升级段落统一走 skillctl。
 
 > **相关技能**：
 > - [server-88-deploy](../server-88-deploy/SKILL.md) — static-deploy 所在 88 服务器的容器运维与部署规范
-> - [ui-diff](../ui-diff/SKILL.md) — 原型与实现画面的跨平台截图比对
-> - [frontend-review](../frontend-review/SKILL.md) — 前端页面审查与交付自检
+> - [ui-acceptance](../ui-acceptance/SKILL.md) — 原型与实现画面的跨平台截图比对与前端页面交付审查
 
 把本机生成的 HTML 原型、截图、图片推到一台内网服务器，换成一个**手机能直接点开**的网址。
 

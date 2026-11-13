@@ -6,7 +6,7 @@
 ## `templates/report.md`
 
 ```markdown
-# ui-diff report — {{SCREEN_ID}}
+# ui-acceptance report — {{SCREEN_ID}}
 
 | Field | Value |
 |-------|-------|

@@ -3,7 +3,7 @@
 > 本文件是技能包内可执行资产的 Markdown 转写 —— 分发通道只放行 `SKILL.md` 与 `references/*.md`。
 > 落地方法：按各节标题里的路径原样写回磁盘，代码块内容与原文件一致。
 > 
-> 说明：`tools/api-testing` 的通用脚手架、MCP Server 完整实现、测试环境配置与用例生命周期管理，请参考 [api-testing-toolkit](../../api-testing-toolkit/SKILL.md) 技能包（及其 `references/scaffold-mcp-server.md` 与 `references/scaffold-project.md`）。
+> 说明：`tools/api-testing` 的通用脚手架、MCP Server 完整实现、测试环境配置与用例生命周期管理，请参考 [app-testing](../../app-testing/SKILL.md) 技能包（及其 `references/api-scaffold-mcp-server.md` 与 `references/api-scaffold-project.md`）。
 > 本文件仅收录 Self-App 场景特有的轻量执行引擎与用例模板（微信登录 Mock、双 Token 轮转、用户协议签署留痕、多租户 IDOR 防御）。
 
 ## `templates/api-testing/package.json`

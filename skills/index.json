@@ -1,23 +1,29 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-12 20:59:06",
+  "updated_at": "2026-11-13 16:23:15",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
     {
-      "name": "api-testing-toolkit",
-      "description": "Use when 前端未就绪时要由 AI 驱动接口测试：为项目初始化接口测试包（tools/api-testing 脚手架、鉴权链、docs 参考），或在已初始化项目里跑回归/冒烟/story 测试、造数验证、探索新接口、缺陷定位与修复闭环。触发词：接口测试、测试包初始化、跑回归、跑冒烟、story 测试、造数验证、tools/api-testing。",
+      "name": "app-testing",
+      "description": "Use when 需要对应用进行全链路测试验证：在前端未就绪时由 AI 驱动接口测试（tools/api-testing 脚手架、鉴权链、跑回归、跑冒烟、story 测试、造数验证与缺陷定位），或对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试（Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server 驱动多服务生命周期）。触发词：接口测试、测试包初始化、跑回归、跑冒烟、story 测试、tools/api-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:35:16",
+      "updated_at": "2026-11-13 16:22:48",
       "files": [
         "SKILL.md",
-        "references/scaffold-mcp-server.md",
-        "references/scaffold-project.md"
+        "references/api-scaffold-mcp-server.md",
+        "references/api-scaffold-project.md",
+        "references/web-examples.md",
+        "references/web-license.md",
+        "references/web-with-server.md"
       ],
       "sha256": {
-        "SKILL.md": "35dd055ed4d6cd6fe13dfa22eeadb3eb2e2594a07a0c38cee6b9ccede230e027",
-        "references/scaffold-mcp-server.md": "f20e8955207065557ce56af2754cb092239432148ca41b8262785267a060b66b",
-        "references/scaffold-project.md": "1afa9167e64e095850d88d4e83015f9304d81182422d5082872292bf6f5c66d2"
+        "SKILL.md": "148b5317973fb75ae5aae6196732c66d22850d2ccb3f2377f8f2e955e8a9836c",
+        "references/api-scaffold-mcp-server.md": "f20e8955207065557ce56af2754cb092239432148ca41b8262785267a060b66b",
+        "references/api-scaffold-project.md": "d00d6a471228f5a96fa504aa660d612f3cd02b8a79949dfd85f4d6fbd185cbf7",
+        "references/web-examples.md": "0c2ad883faff4d316dd9330358adf7284202f6423f676077e32acfe8f6d944c5",
+        "references/web-license.md": "d314487ae6398b2c4df0aa207e3b4432817da511d239d5189d71d4acaa691c22",
+        "references/web-with-server.md": "579da75abb0baf7dfb1207f8393a3f839f827a1cd1703e46ab023815f7cd96ac"
       }
     },
     {
@@ -39,22 +45,10 @@
       }
     },
     {
-      "name": "frontend-review",
-      "description": "Use when AI 写完/改完 Web 页面或功能后要挑出设计问题：功能入口冗余、按钮放错页面、页面写成需求文档、布局审核、交付前自检。触发词：frontend-review、前端审查、设计走查、入口冗余、页面自检、UI 验收。",
-      "version": "1.1.0",
-      "updated_at": "2026-11-12 20:41:33",
-      "files": [
-        "SKILL.md"
-      ],
-      "sha256": {
-        "SKILL.md": "9a6d44dd2e4b025762d48d64c0a7d1e747c038f977e7e3396baf96b4ab589ad1"
-      }
-    },
-    {
       "name": "hearthbox",
       "description": "Use when 进行 Hearthbox（炉边）自制游戏平台的全部开发工作：写游戏、设计玩法、改平台本体、配置金手指/设置项/成就、调试运行时与货架。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。",
-      "version": "1.0.0",
-      "updated_at": "2026-11-12 20:44:32",
+      "version": "1.0.1",
+      "updated_at": "2026-11-13 16:22:37",
       "files": [
         "SKILL.md",
         "references/game-design.md",
@@ -62,8 +56,8 @@
         "references/platform.md"
       ],
       "sha256": {
-        "SKILL.md": "d718c44b7f663bc47f31f25d32870146b0c9c5fdd243e7b6fd009e493503ac1a",
-        "references/game-design.md": "a487b3d530875fa8719826dbf2994dc540633e173ec6daa7496b78c9ac077079",
+        "SKILL.md": "698d4a6bc831e25be4abf08b87b8fa8792dcf105a39d3a3bb06c312a10bcecf3",
+        "references/game-design.md": "dde4b16b673ed30a3357eadf767b715ced6604978653425725e4dacd6d019929",
         "references/game-dev.md": "5e04a005064df3f38d47a7f2c88fa57d8a6b5c9774975661c6cd6a2f22d48d05",
         "references/platform.md": "5b1310cffb69067354da0580857f48eacada344bb9a20f0f8518e47900e4a0ab"
       }
@@ -99,8 +93,8 @@
     {
       "name": "selfapp",
       "description": "Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。触发词：selfapp、自研应用、全栈架构、Hono、Drizzle、IDOR、滑动窗口限频、协议合规、feature-hub。",
-      "version": "1.1.0",
-      "updated_at": "2026-11-12 20:38:29",
+      "version": "1.1.2",
+      "updated_at": "2026-11-13 16:22:48",
       "files": [
         "SKILL.md",
         "references/database-patterns.md",
@@ -112,14 +106,14 @@
         "references/templates.md"
       ],
       "sha256": {
-        "SKILL.md": "8d3bacc215dc08b38cd114bce2cef570209056c86de242c5c2ce13f11021f563",
+        "SKILL.md": "efc67e66003557993b800f89a6ee7678f5c1b974e3cf9c1e5f88db2fd37a21f9",
         "references/database-patterns.md": "d95ef172dbdc0bc80955a5ccbaf81f6f86f62bca87da710eb9ab78cc79eecaf0",
         "references/env-schema.md": "1559a4ca50248f01aa776a078726e2a7fdeee6e22bb17016790009ec32ee137f",
         "references/idor-guard.md": "f26113e09c0b612b750689ce609f17add0c58061b4b882065816d7ddb88eaae4",
         "references/init-selfapp.md": "97eb1b45d0b89e948b80058012791068e2ee6d48c4864ee139f97e38f230d48a",
         "references/logger-middleware.md": "77726609bb1ec2ec05fc1c1101c545f594f891c9395e9dbbb9a8f00a38b736eb",
         "references/sliding-rate-limiter.md": "e666a4663238df6c5cda446b5ad61d0fba2811d8c78990de9bee9ae3ef014bf1",
-        "references/templates.md": "121d5a074bc6e90638dacfb35478c9043c2849dd44849dd4c6ae66396b3d0ca2"
+        "references/templates.md": "0155377a6ecbeeb6a5cee3b0b819632c77dbc7ace656b56f6f7b162ce0729f2a"
       }
     },
     {
@@ -153,22 +147,10 @@
       }
     },
     {
-      "name": "skill-publisher",
-      "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /.well-known/skills 分发（static-deploy，端口 8088）；覆盖编写规范、发布三步、版本纪律与 skillctl 升级段模板。触发词：发布技能、skill-publisher、新建技能、技能规范、sync_index、版本纪律。",
-      "version": "1.3.0",
-      "updated_at": "2026-11-12 20:59:06",
-      "files": [
-        "SKILL.md"
-      ],
-      "sha256": {
-        "SKILL.md": "01342e28e849d391cf8991b9d2a6a90a9d9111402bddea57e42c38b8578da0f3"
-      }
-    },
-    {
       "name": "static-deploy-mcp",
       "description": "Use when 用户要把原型 / HTML / 截图 / 图片 / 静态文件发布到服务器并拿到一个可访问链接，或抱怨「手机上打不开你生成的东西 / 只看得到本地路径」。触发词：static-deploy、发布原型、上传图片、手机预览、deploy_static_project、upload_image。",
-      "version": "2.1.0",
-      "updated_at": "2026-11-12 20:45:08",
+      "version": "2.1.1",
+      "updated_at": "2026-11-13 16:22:37",
       "files": [
         "SKILL.md",
         "references/config-snippet.md",
@@ -176,52 +158,34 @@
         "references/troubleshooting.md"
       ],
       "sha256": {
-        "SKILL.md": "dded33e56a521423544bb92753ca3fad7abf9c6b292ae7750b6cae430d1ba670",
+        "SKILL.md": "64409b62ef99babd81674b042e4edefa33f2eca03bc6a408d56b74f1fff59dbc",
         "references/config-snippet.md": "f6063fa063d7c53fd3f3e0873f8f38bdf6dbb27d1f4c8f189ce650356abfd52a",
         "references/publish-patterns.md": "f69f9114911fc19e932f7d5ee1f7087bd984081402e539d3baa4b618986058ff",
         "references/troubleshooting.md": "6306396f6ed7caa5bb0ca2f5944a40115ad37bc60206d41fc4de2e60610f7aae"
       }
     },
     {
-      "name": "ui-diff",
-      "description": "Use when 需要跨平台 UI 截图比对：抓取预期与实际画面、逐页分类差异并给出验收结论，覆盖桌面 Web/Tauri、Android 应用与微信小程序。触发词：screenshot compare、prototype vs app、UI acceptance、visual regression、页面验收、Android/小程序页面对比、/ui-diff。",
+      "name": "ui-acceptance",
+      "description": "Use when AI 写完/改完 Web 页面、桌面端或移动端界面后要做 UI 验收：设计走查、页面审查、前端交付自检（功能入口冗余、按钮放错页面、页面写成需求文档、布局不合理），或需要跨平台截图比对与视觉回归（抓取预期与实际画面、逐页分类差异并给出验收结论，覆盖桌面 Web/Tauri、Android 应用与微信小程序）。触发词：UI 走查、设计走查、页面审查、前端验收、按钮位置、功能入口、截图对比、视觉回归、跨平台截图、像素对比、diff 截图、UI acceptance。",
       "version": "1.0.0",
-      "updated_at": "2026-11-12 20:39:29",
+      "updated_at": "2026-11-13 16:22:54",
       "files": [
         "SKILL.md",
-        "references/capture-examples.md",
-        "references/capture-web.md",
-        "references/compare-prompt.md",
-        "references/platforms.md",
-        "references/report-template.md",
-        "references/severity-rubric.md"
+        "references/diff-capture-examples.md",
+        "references/diff-capture-web.md",
+        "references/diff-compare-prompt.md",
+        "references/diff-platforms.md",
+        "references/diff-report-template.md",
+        "references/diff-severity-rubric.md"
       ],
       "sha256": {
-        "SKILL.md": "c100537c135845def096be614cf6560bb2e32ba71d4dc073a5d970a6ecbe3018",
-        "references/capture-examples.md": "4691ae34679ef2bc1f5768b0bd6c3a03df69873186b5e37d0206ea9bec9c303c",
-        "references/capture-web.md": "3aac48b34f55104590b55f6d76fadf2ad485746530bf4360c39a444c87792a8b",
-        "references/compare-prompt.md": "07b9d605a4af1304dbd189a6fcd20ad701d372ba5b24a5ef6c74e6a30066baff",
-        "references/platforms.md": "2dffc139e15adb86588c06fbdd02b8fdcb9255641ebb39e0cc94291f9dc54825",
-        "references/report-template.md": "9bbe8ae193dea9bea031dd7527e23b69df404ba6dcaa75a1affedf514402547b",
-        "references/severity-rubric.md": "c9456e97f0b3bd13814b6d95623e6f6804b713c3b19f8dfb733b84d44bf3ddf0"
-      }
-    },
-    {
-      "name": "webapp-testing",
-      "description": "Use when 需要对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试：用 Python Playwright 编写自动化脚本、驱动多服务生命周期（with_server.py）、捕获页面状态与浏览器日志。触发词：webapp-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。",
-      "version": "1.0.0",
-      "updated_at": "2026-11-12 20:52:29",
-      "files": [
-        "SKILL.md",
-        "references/examples.md",
-        "references/license.md",
-        "references/with-server.md"
-      ],
-      "sha256": {
-        "SKILL.md": "b1835d21fec3b80dd7e061cd9d29d88a6ab86b28a1a0acbcc1973f63ba997e20",
-        "references/examples.md": "0c2ad883faff4d316dd9330358adf7284202f6423f676077e32acfe8f6d944c5",
-        "references/license.md": "d314487ae6398b2c4df0aa207e3b4432817da511d239d5189d71d4acaa691c22",
-        "references/with-server.md": "579da75abb0baf7dfb1207f8393a3f839f827a1cd1703e46ab023815f7cd96ac"
+        "SKILL.md": "a6e618681282142964dd95a74963973eb0423008d8608a5d11414afe27e66f3f",
+        "references/diff-capture-examples.md": "4691ae34679ef2bc1f5768b0bd6c3a03df69873186b5e37d0206ea9bec9c303c",
+        "references/diff-capture-web.md": "c5d25a60ec9f449c4e70119b9113c79474fd2e0bd55d5ff03f3a8bdcb93f746e",
+        "references/diff-compare-prompt.md": "07b9d605a4af1304dbd189a6fcd20ad701d372ba5b24a5ef6c74e6a30066baff",
+        "references/diff-platforms.md": "2dffc139e15adb86588c06fbdd02b8fdcb9255641ebb39e0cc94291f9dc54825",
+        "references/diff-report-template.md": "f6597c6d019180f06568b626a0929d82526ba4a38e586b120f577f69a592482a",
+        "references/diff-severity-rubric.md": "c9456e97f0b3bd13814b6d95623e6f6804b713c3b19f8dfb733b84d44bf3ddf0"
       }
     }
   ]

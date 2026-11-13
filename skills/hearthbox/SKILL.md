@@ -1,22 +1,22 @@
 ---
 name: hearthbox
 description: Use when 进行 Hearthbox（炉边）自制游戏平台的全部开发工作：写游戏、设计玩法、改平台本体、配置金手指/设置项/成就、调试运行时与货架。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。
-version: 1.0.0
+version: 1.0.1
 author: Hermes coding agent
 license: MIT
 metadata:
   hermes:
     tags: [game, hearthbox, sdk, defineGame, cheats, runtime]
-    related_skills: [ui-diff, webapp-testing, project-repo-standards]
+    related_skills: [ui-acceptance, app-testing, project-repo-standards]
 ---
 
 # Hearthbox（炉边）
 
-> 版本记录：1.0.0 首发 Hearthbox 平台开发与游戏接入规范，补齐标准 frontmatter、相关技能与升级段。
+> 版本记录：1.0.1 技能收拢：ui-diff 与 frontend-review 合并为 ui-acceptance、webapp-testing 与 api-testing-toolkit 合并为 app-testing，更新互链（2026-11-13）；1.0.0 首发 Hearthbox 平台开发与游戏接入规范，补齐标准 frontmatter、相关技能与升级段。
 
 > **相关技能**：
-> - [ui-diff](../ui-diff/SKILL.md) — 游戏与平台界面跨端截图比对验收
-> - [webapp-testing](../webapp-testing/SKILL.md) — Web 运行时 Playwright 交互与自动化测试
+> - [ui-acceptance](../ui-acceptance/SKILL.md) — 游戏与平台界面跨端截图比对验收与前端交付审查
+> - [app-testing](../app-testing/SKILL.md) — Web 运行时 Playwright 交互与自动化测试
 > - [project-repo-standards](../project-repo-standards/SKILL.md) — 项目工程结构与代码规范
 
 一个手柄优先的自制游戏平台：壳 + 货架 + 游戏包。游戏只针对 SDK 写，不针对操作系统。
@@ -35,7 +35,7 @@ metadata:
 | 定美术风格、做素材 | `game-art` | 视觉风格、素材管线、动画 |
 | 做音效与音乐 | `game-audio` | 音效设计、自适应音频 |
 | 不确定该用哪套 | `game-development` | 它是个编排技能，会路由到上面几个 |
-| 验收要截图对比/交互测试 | `ui-diff` / `webapp-testing` | 自动截图、视觉回归与浏览器交互 |
+| 验收要截图对比/交互测试 | `ui-acceptance` / `app-testing` | 自动截图、视觉回归与浏览器交互 |
 | 设计模块边界 | `codebase-design` | 深模块、接口放置 |
 
 **规则**：

@@ -134,7 +134,7 @@ AI 生成素材的默认行为是每次独立生成。不约束时必然出现�
 [ ] 截图存到 evidence/
 ```
 
-截图怎么拿：用 `playwright-skill` 或 `webapp-testing`，或者直接 `page.screenshot()`。**没有截图的"完成"都是假的。**
+截图怎么拿：用 `playwright-skill` 或 `app-testing`，或者直接 `page.screenshot()`。**没有截图的"完成"都是假的。**
 
 ## 什么时候用哪个技能
 

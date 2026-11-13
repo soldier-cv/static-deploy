@@ -1,23 +1,23 @@
 ---
 name: selfapp
 description: Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。触发词：selfapp、自研应用、全栈架构、Hono、Drizzle、IDOR、滑动窗口限频、协议合规、feature-hub。
-version: 1.1.0
+version: 1.1.2
 author: Hermes coding agent
 license: MIT
 metadata:
   hermes:
     tags: [fullstack, selfapp, hono, drizzle, postgres, redis, uni-app, multi-tenancy, idor]
-    related_skills: [api-testing-toolkit, project-repo-standards, ui-diff]
+    related_skills: [app-testing, project-repo-standards, ui-acceptance]
 ---
 
 # Self-App 全栈自研应用开发与架构设计指南
 
-> 版本记录：1.1.0 整合去重：接口测试通用脚手架下沉至 api-testing-toolkit，保留 Self-App 独有测试用例（双 Token、多租户 IDOR、协议合规签署）；补齐 frontmatter 与标准升级段。
+> 版本记录：1.1.2 技能收拢：ui-diff 与 frontend-review 合并为 ui-acceptance，更新互链与 templates.md 中的 app-testing 链接及 api-scaffold-*.md 文件名（2026-11-13）；1.1.1 依赖对齐：api-testing-toolkit 与 webapp-testing 合并为 app-testing，更新相关技能引用与章节联动（2026-11-13）；1.1.0 整合去重：接口测试通用脚手架下沉至 api-testing-toolkit，保留 Self-App 独有测试用例（双 Token、多租户 IDOR、协议合规签署）；补齐 frontmatter 与标准升级段。
 
 > **相关技能**：
-> - [api-testing-toolkit](../api-testing-toolkit/SKILL.md) — 通用接口测试工具包、tools/api-testing 脚手架与 MCP Server 完整实现
+> - [app-testing](../app-testing/SKILL.md) — 自动化应用测试套件（接口测试与 Web 功能测试、tools/api-testing 脚手架与 Playwright E2E）
 > - [project-repo-standards](../project-repo-standards/SKILL.md) — 仓库初始化、CI/CD 选型与版本纪律
-> - [ui-diff](../ui-diff/SKILL.md) — 客户端多端还原后的截图比对与验收
+> - [ui-acceptance](../ui-acceptance/SKILL.md) — 客户端多端还原后的截图比对与验收
 
 本指南汇聚了「往来 · WangLai」与「幼安宝 · BabyGo」两大产品的最佳实战经验，是开发所有现代化自研独立全栈应用（Self-App）的**统一工程与架构真理基准**。
 
@@ -180,13 +180,13 @@ flowchart LR
 
 ---
 
-## 七、自动化 API Testing 测试套件（联动 `api-testing-toolkit`）
+## 七、自动化 API Testing 测试套件（联动 `app-testing`）
 
 ### 7.1 阶段门禁（Stage Gate 4）
 在后端路由和数据表迁移完成后，必须触发接口测试闭环，**严禁在未经自动化回归前启动前端开发**。
 
 ### 7.2 测试架构与能力
-* **专项技能联动**：通用 `tools/api-testing` 脚手架目录、MCP Server 完整实现、测试环境配置与用例生命周期管理，统一由 [api-testing-toolkit](../api-testing-toolkit/SKILL.md) 驱动；
+* **专项技能联动**：通用 `tools/api-testing` 脚手架目录、MCP Server 完整实现、测试环境配置与用例生命周期管理，统一由 [app-testing](../app-testing/SKILL.md) 驱动；
 * **Self-App 场景特有校验重点**：
   1. **微信授权登录 Mock 与双 Token 轮转**：模拟用户微信登录拿 code，获取并断言短效 Access Token 与长效 Refresh Token 轮转机制；
   2. **多租户 IDOR 严格防越权**：断言请求未带 `X-Tenant-Id` / `X-Family-Id` 返回 400，跨租户注入非法 ID 拦截返回 403 `NOT_TENANT_MEMBER`；
@@ -300,7 +300,7 @@ node <skill-path>/scripts/init-selfapp.mjs  # 脚本内容见 references/init-se
 | `templates/api-testing/runner.mjs` | `references/templates.md`（`## templates/api-testing/runner.mjs` 节） |
 | `templates/api-testing/stories.example.js` | `references/templates.md`（`## templates/api-testing/stories.example.js` 节） |
 
-> 本技能原带 .ts 参考实现、初始化脚本与 Self-App 特有测试模板，已转写为 Markdown；按 `## 路径` 还原后即可直接使用。通用 `tools/api-testing` 脚手架与 MCP Server 实现见 [api-testing-toolkit](../api-testing-toolkit/SKILL.md)。
+> 本技能原带 .ts 参考实现、初始化脚本与 Self-App 特有测试模板，已转写为 Markdown；按 `## 路径` 还原后即可直接使用。通用 `tools/api-testing` 脚手架与 MCP Server 实现见 [app-testing](../app-testing/SKILL.md)。
 
 ## 版本与升级（统一走 skillctl）
 

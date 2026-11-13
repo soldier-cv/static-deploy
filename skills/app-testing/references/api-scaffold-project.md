@@ -9,7 +9,7 @@
 # 接口测试工具包 (tools/api-testing)
 
 > 无前端时由 AI 按 story 驱动: 登录 → 调接口 → 查库验证 → 造数(留库) → 报告。
-> 由全局技能 **api-testing-toolkit** 的脚手架初始化; 方法论/约定详见该技能, 本 README 记录本项目特有事实与演进。
+> 由全局技能 **app-testing** 的脚手架初始化; 方法论/约定详见该技能, 本 README 记录本项目特有事实与演进。
 
 ## 目录
 
@@ -48,7 +48,7 @@ node src/run-tests.js --list                     # 列出全部测试链
 
 | 日期 | 优化点 | 结果 |
 |---|---|---|
-| (init) | 由 api-testing-toolkit 脚手架初始化 | — |
+| (init) | 由 app-testing 脚手架初始化 | — |
 ````
 
 ## `scaffold/defects.json`
