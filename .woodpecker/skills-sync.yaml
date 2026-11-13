@@ -50,6 +50,9 @@ steps:
     commands:
       # sync_from_static_deploy.sh 依赖 bash/python3/rsync
       - apk add --no-cache git bash python3 rsync
+      # 容器 root 访问宿主用户仓库须显式放行（否则 git 一律 dubious ownership，
+      # 连 git config 都报 fatal: not in a git directory —— pipeline #12/#13 根因）
+      - git config --global --add safe.directory /opt/code/skills
       - |
         cd /opt/code/skills
         # 配置提交身份（须在 sync 脚本之前：脚本自身会对变更做 commit）
