@@ -64,9 +64,9 @@ steps:
           exit 0
         fi
         # token 非空断言：secret 未注入时立即失败
-        : "${SKILLS_GIT_TOKEN:?SKILLS_GIT_TOKEN not set}"
+        : "$${SKILLS_GIT_TOKEN:?SKILLS_GIT_TOKEN not set}"
         # 用 x-access-token 拼 HTTPS url，仅本次 shell 会话生效，不落盘
-        REMOTE_URL="https://x-access-token:${SKILLS_GIT_TOKEN}@github.com/soldier-cv/skills.git"
+        REMOTE_URL="https://x-access-token:$${SKILLS_GIT_TOKEN}@github.com/soldier-cv/skills.git"
         git remote set-url origin "$REMOTE_URL"
         git commit -m "sync: from static-deploy $${CI_COMMIT_SHA}" || true
         RC=0
