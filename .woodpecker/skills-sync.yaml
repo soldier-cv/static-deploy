@@ -87,13 +87,18 @@ steps:
     commands:
       - apk add --no-cache wget python3
       - |
-        JSON=$(wget -qO- http://172.17.0.1:8088/.well-known/skills/index.json)
+        # 分发端部署由另一 workflow (sync-and-restart) 完成，存在时序差：加重试
+        for i in 1 2 3 4 5 6; do
+          JSON=$(wget -qO- http://172.17.0.1:8088/.well-known/skills/index.json) && break
+          sleep 10
+        done
         python3 -c "
         import json, sys
         data = json.loads(sys.argv[1])
         names = [s['name'] for s in data.get('skills', [])]
         assert 'skill-ops' in names, f'skill-ops not in index: {names}'
+        assert 'resource-mgr' in names, f'resource-mgr not in index: {names}'
         assert 'skill-distribution' not in names, 'skill-distribution still in index'
         assert 'skill-publisher' not in names, 'skill-publisher still in index'
-        print(f'verify OK: {len(names)} skills, skill-ops present, old names gone')
+        print(f'verify OK: {len(names)} skills, skill-ops + resource-mgr present, old names gone')
         " "$JSON"
