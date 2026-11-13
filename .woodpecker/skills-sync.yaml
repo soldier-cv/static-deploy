@@ -32,6 +32,8 @@ steps:
       - /opt/code/static-deploy:/opt/code/static-deploy
       - /opt/code/skills:/opt/code/skills
     commands:
+      # alpine CDN 经代理频繁 TLS eof，换阿里云镜像源（国内直连稳定）
+      - sed -i "s/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g" /etc/apk/repositories
       - apk add --no-cache git rsync python3
       # 把 workspace 里的 skills/ 同步到宿主分发目录（不用 --delete：
       #   本地 EXCLUDE 技能与宿主侧文件不能被自动清理）
@@ -49,6 +51,8 @@ steps:
         from_secret: SKILLS_GIT_TOKEN
     commands:
       # sync_from_static_deploy.sh 依赖 bash/python3/rsync
+      # alpine CDN 经代理频繁 TLS eof，换阿里云镜像源（国内直连稳定）
+      - sed -i "s/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g" /etc/apk/repositories
       - apk add --no-cache git bash python3 rsync
       # 容器 root 访问宿主用户仓库须显式放行（否则 git 一律 dubious ownership，
       # 连 git config 都报 fatal: not in a git directory —— pipeline #12/#13 根因）
