@@ -1,7 +1,7 @@
 ---
 name: skill-ops
 description: Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /.well-known/skills（static-deploy，端口 8088）；或用 skillctl 给客户端安装/升级技能。覆盖编写规范、发布流程、版本纪律与 skillctl 用法。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills、发布技能、新建技能、技能规范、sync_index、版本纪律、技能修改。
-version: 1.0.2
+version: 1.0.3
 author: Hermes coding agent
 license: MIT
 metadata:
