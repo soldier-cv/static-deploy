@@ -1,7 +1,7 @@
 ---
 name: app-testing
 description: Use when 需要对应用进行全链路测试验证：在前端未就绪时由 AI 驱动接口测试（tools/api-testing 脚手架、鉴权链、跑回归、跑冒烟、story 测试、造数验证、按方案补测与漏测排查、缺陷定位），或对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试（Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server 驱动多服务生命周期）。触发词：接口测试、测试包初始化、跑回归、跑冒烟、回归红了、story 测试、造数验证、方案对照、补测、漏测、tools/api-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。
-version: 1.1.0
+version: 1.1.1
 author: Hermes coding agent
 license: Apache-2.0
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 # 应用测试套件 (app-testing)
 
-> 版本记录：1.1.0 接口测试章新增「规格先行」不变量对照与 STOP 门禁、日志时间游标、环境熔断、文档防膨胀治理，并补「已定制项目禁止重铺脚手架」；1.0.0 由 api-testing-toolkit v1.0.0 + webapp-testing v1.0.0 合并首发（2026-11-13）。
+> 版本记录：1.1.1 语言适配防护——Web E2E 测试脚本语言跟随被测项目技术栈（TS/Java/Python），禁止在非 Python 项目默认搭 Python 测试环境（2026-11-13）；1.1.0 接口测试章新增「规格先行」不变量对照与 STOP 门禁、日志时间游标、环境熔断、文档防膨胀治理，并补「已定制项目禁止重铺脚手架」；1.0.0 由 api-testing-toolkit v1.0.0 + webapp-testing v1.0.0 合并首发（2026-11-13）。
 
 > **相关技能**：
 > - [ui-acceptance](../ui-acceptance/SKILL.md) — 统一 UI 验收体系（截图比对、视觉回归与前端交付审查）
@@ -203,7 +203,9 @@ STOP（未满足不许说「已覆盖」）：
 
 ## 第二章 Web 功能测试
 
-To test local web applications, write native Python Playwright scripts.
+> **语言适配（必读）**：测试脚本的实现语言**跟随被测项目的技术栈**，不要默认 Python。项目是 TypeScript/Node 优先用 Playwright for TypeScript（`@playwright/test`）；Java 项目用 Playwright for Java 或 Selenium；只有项目本身是 Python 生态（或一次性临时验证脚本）才用 Python。`with_server.py` 是语言无关的服务器生命周期包装器，任何栈的服务启动命令都能套。**禁止**为了跑测试在非 Python 项目里新建 venv/pytest/pyproject。
+
+To test local web applications, write Playwright automation scripts **in the language of the project under test** (Python Playwright only when the project itself is Python).
 
 **Helper Scripts Available**:
 - `references/web-with-server.md` - Manages server lifecycle (supports multiple servers)；按节还原为 `scripts/with_server.py` 后执行

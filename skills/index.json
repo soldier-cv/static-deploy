@@ -1,14 +1,14 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-13 16:26:01",
+  "updated_at": "2026-11-13 16:47:08",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
     {
       "name": "app-testing",
       "description": "Use when 需要对应用进行全链路测试验证：在前端未就绪时由 AI 驱动接口测试（tools/api-testing 脚手架、鉴权链、跑回归、跑冒烟、story 测试、造数验证、按方案补测与漏测排查、缺陷定位），或对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试（Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server 驱动多服务生命周期）。触发词：接口测试、测试包初始化、跑回归、跑冒烟、回归红了、story 测试、造数验证、方案对照、补测、漏测、tools/api-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。",
-      "version": "1.1.0",
-      "updated_at": "2026-11-13 16:26:01",
+      "version": "1.1.1",
+      "updated_at": "2026-11-13 16:47:08",
       "files": [
         "SKILL.md",
         "references/api-scaffold-mcp-server.md",
@@ -18,7 +18,7 @@
         "references/web-with-server.md"
       ],
       "sha256": {
-        "SKILL.md": "54c2c5e2e15b18322ec33e6e82b58a16f8b044088e6d5a9dca3a3c0fc974a5af",
+        "SKILL.md": "8fcb80e2f9ea96dd96e32f3b6ca9eccadaf11d75c8e7d7515c4dcbf0807011e8",
         "references/api-scaffold-mcp-server.md": "f20e8955207065557ce56af2754cb092239432148ca41b8262785267a060b66b",
         "references/api-scaffold-project.md": "d00d6a471228f5a96fa504aa660d612f3cd02b8a79949dfd85f4d6fbd185cbf7",
         "references/web-examples.md": "0c2ad883faff4d316dd9330358adf7284202f6423f676077e32acfe8f6d944c5",
