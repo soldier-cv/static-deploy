@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-13 18:20:47",
+  "updated_at": "2026-11-13 19:19:24",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -8,7 +8,7 @@
       "name": "app-testing",
       "description": "Use when 需要对应用进行全链路测试验证：在前端未就绪时由 AI 驱动接口测试（tools/api-testing 脚手架、鉴权链、跑回归、跑冒烟、story 测试、造数验证、按方案补测与漏测排查、缺陷定位），或对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试（Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server 驱动多服务生命周期）。触发词：接口测试、测试包初始化、跑回归、跑冒烟、回归红了、story 测试、造数验证、方案对照、补测、漏测、tools/api-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。",
       "version": "1.1.1",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/api-scaffold-mcp-server.md",
@@ -30,7 +30,7 @@
       "name": "desktop-release-ci-playbook",
       "description": "Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。触发词：Tauri 发版、CI 排障、latest.json、Gitee 镜像、Woodpecker 流水线、桌面客户端更新。",
       "version": "1.3.0",
-      "updated_at": "2026-11-13 18:20:47",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/gitee-mirror.md",
@@ -48,7 +48,7 @@
       "name": "hearthbox",
       "description": "Use when 进行 Hearthbox（炉边）自制游戏平台的全部开发工作：写游戏、设计玩法、改平台本体、配置金手指/设置项/成就、调试运行时与货架。触发词：hearthbox、炉边、写游戏、defineGame、game.json、金手指、货架、运行时、平台。",
       "version": "1.0.1",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/game-design.md",
@@ -66,7 +66,7 @@
       "name": "project-repo-standards",
       "description": "Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。触发词：新建仓库、项目规范、AGENTS.md、.gitignore、Woodpecker、GitHub Actions、Gitee 镜像、版本纪律。",
       "version": "1.6.1",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/ci-coexistence.md",
@@ -94,7 +94,7 @@
       "name": "selfapp",
       "description": "Use when 从零建立自研独立全栈应用（Self-App）：初始化流程与文档体系、环境变量加载、数据表设计、核心安全与 IP 并发防护、协议合规、多级缓存、API 测试故事流、客户端还原与验收闭环、代码注释标准。触发词：selfapp、自研应用、全栈架构、Hono、Drizzle、IDOR、滑动窗口限频、协议合规、feature-hub。",
       "version": "1.1.2",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/database-patterns.md",
@@ -120,7 +120,7 @@
       "name": "server-88-deploy",
       "description": "Use when deploying, updating, inspecting, or managing Docker containers or services on LAN server 88 (100.64.0.88), or working with /opt/deploy and /data paths. 触发词：server 88, 100.64.0.88, docker compose deploy, deploy-helper, 88部署, 容器运维.",
       "version": "1.1.0",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/compose-template.md",
@@ -138,7 +138,7 @@
       "name": "skill-ops",
       "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /.well-known/skills（static-deploy，端口 8088）；或用 skillctl 给客户端安装/升级技能。覆盖编写规范、发布流程、版本纪律与 skillctl 用法。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills、发布技能、新建技能、技能规范、sync_index、版本纪律、技能修改。",
       "version": "1.0.3",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md"
       ],
@@ -150,7 +150,7 @@
       "name": "static-deploy-mcp",
       "description": "Use when 用户要把原型 / HTML / 截图 / 图片 / 静态文件发布到服务器并拿到一个可访问链接，或抱怨「手机上打不开你生成的东西 / 只看得到本地路径」。触发词：static-deploy、发布原型、上传图片、手机预览、deploy_static_project、upload_image。",
       "version": "2.1.1",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/config-snippet.md",
@@ -168,7 +168,7 @@
       "name": "ui-acceptance",
       "description": "Use when AI 写完/改完 Web 页面、桌面端或移动端界面后要做 UI 验收：设计走查、页面审查、前端交付自检（功能入口冗余、按钮放错页面、页面写成需求文档、布局不合理），或需要跨平台截图比对与视觉回归（抓取预期与实际画面、逐页分类差异并给出验收结论，覆盖桌面 Web/Tauri、Android 应用与微信小程序）。触发词：UI 走查、设计走查、页面审查、前端验收、按钮位置、功能入口、截图对比、视觉回归、跨平台截图、像素对比、diff 截图、UI acceptance。",
       "version": "1.0.0",
-      "updated_at": "2026-11-13 18:05:20",
+      "updated_at": "2026-11-13 19:05:30",
       "files": [
         "SKILL.md",
         "references/diff-capture-examples.md",
