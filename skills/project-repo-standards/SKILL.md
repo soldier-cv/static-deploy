@@ -1,7 +1,7 @@
 ---
 name: project-repo-standards
 description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。触发词：新建仓库、项目规范、AGENTS.md、.gitignore、Woodpecker、GitHub Actions、Gitee 镜像、版本纪律。
-version: 1.6.1
+version: 1.6.2
 author: Hermes coding agent
 license: MIT
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 # 项目仓库规范：初始化、CI 选型、文档与升级
 
-> 版本记录：1.6.1 交叉引用：skill-publisher + skill-distribution 合并为 skill-ops，相关技能列表与互链同步更新；1.6.0 整合上传技能去重。
+> 版本记录：1.6.2 第 7 节补「本地残留安装包冒充检查结论」警示（飞梭 v0.1.25 教训，跨引 desktop-release-ci-playbook）；1.6.1 交叉引用：skill-publisher + skill-distribution 合并为 skill-ops，相关技能列表与互链同步更新；1.6.0 整合上传技能去重。
 
 > **相关技能**：
 > - [server-88-deploy](../server-88-deploy/SKILL.md) — 88 服务器 Docker 部署与运维规范
@@ -337,8 +337,8 @@ jobs:
 | 形态 | 版本在谁手里 | 升级靠什么 | 最容易做错的 |
 |---|---|---|---|
 | Web 服务 | 你的服务器 | 部署即生效 | 以为要「客户端升级」；实际要的是**回滚点**+数据库迁移可逆 |
-| 桌面客户端 | 用户电脑 | latest.json + 自动更新 | 版本清单与 Release 附件不一致；没签名 |
-| 安卓 App | 用户设备 | 应用内检查/商店 | `versionCode` 不递增（客户端看不到更新）；换签名密钥（全员卸载重装） |
+| 桌面客户端 | 用户电脑 | latest.json + 自动更新 | 版本清单与 Release 附件不一致；没签名；**本地残留安装包冒充检查结论**（升级器先查本地缓存再查远端，会把旧包当"已就绪"跳过联网，飞梭 v0.1.25 修复的教训——规则：远端检查结果优先，本地包仅版本与远端目标相同时才复用，启动时清理已安装包；详见 [desktop-release-ci-playbook](../desktop-release-ci-playbook/SKILL.md) 排障表） |
+| 安卓 App | 用户设备 | 应用内检查/商店 | `versionCode` 不递增（客户端看不到更新）；换签名密钥（全员卸载重装）；**pendingApk 同类残留**（同上规则） |
 | 嵌入式固件 | 设备板子 | OTA / 烧录 | 没有 A/B 分区（断电变砖）；不能降级；版本不上报 |
 | 浏览器扩展 | 浏览器 | 商店 / update_url | 加权限当普通改动；旧版本长期存在 |
 
