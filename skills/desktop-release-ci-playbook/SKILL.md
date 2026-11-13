@@ -1,7 +1,7 @@
 ---
 name: desktop-release-ci-playbook
 description: Use when 桌面应用发版 CI 出问题（Tauri 打包/签名/latest.json/自动更新），或要接 GitHub→Gitee 双通道同步、写 Woodpecker 部署流水线。触发词：Tauri 发版、CI 排障、latest.json、Gitee 镜像、Woodpecker 流水线、桌面客户端更新。
-version: 1.2.0
+version: 1.3.0
 author: 程序员（coding）
 license: MIT
 platforms: [linux, macos, windows]
@@ -19,7 +19,7 @@ metadata:
 
 # 桌面应用发版 CI 全链路（GitHub Actions + Gitee 镜像 + Woodpecker）
 
-> 版本记录：1.2.0 整合上传技能去重，互链 server-88-deploy（本机部署）与 static-deploy-mcp，修复外部技能引用表述与标准升级段；1.1.1 升级段落统一走 skillctl。
+> 版本记录：1.3.0 新增排障条目「本地残留安装包冒充检查结论」及四条防劫持规则（feisuo 0.1.25 先例）；1.2.0 整合上传技能去重，互链 server-88-deploy（本机部署）与 static-deploy-mcp，修复外部技能引用表述与标准升级段；1.1.1 升级段落统一走 skillctl。
 
 > **相关技能**：
 > - [server-88-deploy](../server-88-deploy/SKILL.md) — 88 服务器 Docker 服务与 Compose 运维规范
@@ -178,6 +178,7 @@ docker inspect <container> --format '{{.Image}}'; docker images --digests | grep
 | Gitee 附件上传 400 | 同名附件已存在 | 先列 attach_files 删同名再传 |
 | Gitee JSON POST 400 | WAF 拦 JSON | 改 `-F` multipart |
 | 客户端提示新版但下载 404 | latest.json 先于附件生效 / url 指错文件 | 镜像 job 里逐个 URL 校验 200 再收工 |
+| 客户端提示的版本比真实最新版旧，装完又提示再升级（多走一轮重启） | **本地残留安装包冒充检查结论**：`check` 开头"已有就绪包且比当前新 ⇒ 直接返回，不联网"，旧包越陈版本越假 | 检查永远以远端为准；本地包只在版本号==远端时复用文件；启动恢复只恢复文件不发 Ready；已装上的包（≤当前版本）启动即删。加守卫测试钉死"网络检查先于取用本地包"（feisuo 0.1.25 先例：update_guard::local_package_must_not_impersonate_a_check_result） |
 | Woodpecker 每条 pipeline `Insufficient trust level` | repo `trusted.volumes` 未开 | PATCH repo trusted 开 volumes/security |
 | Woodpecker step 秒退 exit 2 / `parameter not set` | step 脚本裸引用未注入变量 | 一律 `$${VAR:-}` + 存在性判断 |
 | 新容器起不来、端口被占 | 旧容器名变了但没被删 | `docker rm -f <旧名>` 后再 `compose up` |
