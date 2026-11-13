@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-13 17:09:59",
+  "updated_at": "2026-11-13 17:30:25",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -137,13 +137,13 @@
     {
       "name": "skill-ops",
       "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /.well-known/skills（static-deploy，端口 8088）；或用 skillctl 给客户端安装/升级技能。覆盖编写规范、发布流程、版本纪律与 skillctl 用法。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills、发布技能、新建技能、技能规范、sync_index、版本纪律、技能修改。",
-      "version": "1.0.0",
-      "updated_at": "2026-11-13 17:09:52",
+      "version": "1.0.1",
+      "updated_at": "2026-11-13 17:30:25",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "cda377805d307f3e8d78e067092acc68de32f93594cb563a15f623f8b4c3f9ee"
+        "SKILL.md": "e6632b5cf54bc873d41fe1e9fa4c2b60aa1b5d0aa7514cfc4783c0ae67fb2c80"
       }
     },
     {
