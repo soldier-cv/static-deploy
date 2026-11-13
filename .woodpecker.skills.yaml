@@ -1,0 +1,76 @@
+# Woodpecker v3 — 技能包索引重建与 GitHub 镜像同步
+#
+# 触发：push 到 main 且 path 包含 skills/**，或手动触发（events: push, manual）。
+#
+# token secret：SKILLS_GIT_TOKEN 需在 Woodpecker repo 16 预先创建（scope: push）。
+#   yml 里只引用环境变量，token 不得落盘、不得持久化写入 remote url。
+#
+# 激活方式：将此文件提交到 static-deploy 仓库 main 分支后，在 Woodpecker
+#   repo 16 的 pipeline 列表里找到「skills-sync」并启用；push/skills/** 即触发。
+#
+# 已知限制：删技能时本流水线不会执行 rsync --delete（仅做新增/更新同步），
+#   删除操作仍需服务器端手动运行 /opt/code/skills/sync_from_static_deploy.sh。
+
+when:
+  - event: push
+    branch: main
+    path:
+      include:
+        - 'skills/**'
+  - event: manual
+
+steps:
+  sync-skills:
+    image: alpine:3.20
+    volumes:
+      - /opt/code/static-deploy:/opt/code/static-deploy
+      - /opt/code/skills:/opt/code/skills
+    commands:
+      - apk add --no-cache git rsync python3
+      # 把 workspace 里的 skills/ 同步到宿主分发目录（不用 --delete：
+      #   本地 EXCLUDE 技能与宿主侧文件不能被自动清理）
+      - rsync -a "${CI_WORKSPACE}/skills/" /opt/code/static-deploy/skills/
+      # 重算 index.json（version/sha256/updated_at 全自动）
+      - python3 /opt/code/static-deploy/skills/sync_index.py
+
+  mirror-push:
+    image: alpine:3.20
+    volumes:
+      - /opt/code/static-deploy:/opt/code/static-deploy
+      - /opt/code/skills:/opt/code/skills
+    environment:
+      SKILLS_GIT_TOKEN: ${SKILLS_GIT_TOKEN}
+    commands:
+      - apk add --no-cache git
+      - bash /opt/code/skills/sync_from_static_deploy.sh "ci: auto sync from ${CI_COMMIT_SHA}"
+      - |
+        cd /opt/code/skills
+        # 临时配置 user（不写 .git/config 持久化）
+        git config user.email "ci-bot <ci@internal>"
+        git config user.name "ci-bot"
+        if git diff --cached --quiet && git diff --quiet; then
+          echo "no-change"
+          exit 0
+        fi
+        # 用 x-access-token 拼 HTTPS url，仅在本次 shell 会话生效，不落盘
+        TOKEN="${SKILLS_GIT_TOKEN:?SKILLS_GIT_TOKEN not set}"
+        REMOTE_URL="https://x-access-token:${TOKEN}@github.com/soldier-cv/skills.git"
+        git remote set-url origin "${REMOTE_URL}"
+        git commit -m "sync: from static-deploy ${CI_COMMIT_SHA}" || true
+        git push origin main
+
+  verify:
+    image: alpine:3.20
+    commands:
+      - apk add --no-cache wget python3
+      - |
+        JSON=$(wget -qO- http://172.17.0.1:8088/.well-known/skills/index.json)
+        python3 -c "
+import json, sys
+data = json.loads(sys.argv[1])
+names = [s['name'] for s in data.get('skills', [])]
+assert 'skill-ops' in names, f'skill-ops not in index: {names}'
+assert 'skill-distribution' not in names, 'skill-distribution still in index'
+assert 'skill-publisher' not in names, 'skill-publisher still in index'
+print(f'verify OK: {len(names)} skills, skill-ops present, old names gone')
+" "$JSON"

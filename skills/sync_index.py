@@ -25,7 +25,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(ROOT, "index.json")
 CST = timezone(timedelta(hours=8))
 # 本地工具技能：保留在 skills/ 供本机使用，但不进分发包
-EXCLUDE_SKILLS = {"skill-publisher"}
+EXCLUDE_SKILLS = set()
 ALLOWED_SUBDIRS = ("references", "scripts", "assets", "templates")
 ALLOWED_FILE_RE = re.compile(
     r"^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:md|py|sh|js|ps1|yaml|yml|json|txt|toml|bat|cmd)$"

@@ -1,24 +1,23 @@
 ---
 name: project-repo-standards
 description: Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。触发词：新建仓库、项目规范、AGENTS.md、.gitignore、Woodpecker、GitHub Actions、Gitee 镜像、版本纪律。
-version: 1.6.0
+version: 1.6.1
 author: Hermes coding agent
 license: MIT
 metadata:
   hermes:
     tags: [repo, scaffolding, woodpecker, github-actions, agents-md, gitee, gitignore]
-    related_skills: [server-88-deploy, selfapp, skill-publisher, skill-distribution, desktop-release-ci-playbook]
+    related_skills: [server-88-deploy, selfapp, skill-ops, desktop-release-ci-playbook]
 ---
 
 # 项目仓库规范：初始化、CI 选型、文档与升级
 
-> 版本记录：1.6.0 整合上传技能去重：清理旧式逐文件 curl 升级残留，统一至文末 skillctl 标准升级段，互链 server-88-deploy 与 selfapp；1.5.0 新增交付形态分层与 skills 随代码真源分发规范。
+> 版本记录：1.6.1 交叉引用：skill-publisher + skill-distribution 合并为 skill-ops，相关技能列表与互链同步更新；1.6.0 整合上传技能去重。
 
 > **相关技能**：
 > - [server-88-deploy](../server-88-deploy/SKILL.md) — 88 服务器 Docker 部署与运维规范
 > - [selfapp](../selfapp/SKILL.md) — 自研全栈应用工程与架构标准
-> - [skill-publisher](../skill-publisher/SKILL.md) — 技能编写规范、发布三步与版本纪律
-> - [skill-distribution](../skill-distribution/SKILL.md) — 技能分发与客户端安装升级（skillctl）
+> - [skill-ops](../skill-ops/SKILL.md) — 技能编写发布规范、skillctl 安装升级端与版本纪律
 > - [desktop-release-ci-playbook](../desktop-release-ci-playbook/SKILL.md) — 桌面应用发版 CI 全链路排障
 
 > 适用：新仓库开工，或给已有仓库补 CI / 文档 / 忽略规则。

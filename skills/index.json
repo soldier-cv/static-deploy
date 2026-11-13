@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-13 16:47:08",
+  "updated_at": "2026-11-13 17:09:59",
   "update_url": "http://100.64.0.88:8088/.well-known/skills/index.json",
   "install_root": "http://100.64.0.88:8088/.well-known/skills/",
   "skills": [
@@ -65,15 +65,15 @@
     {
       "name": "project-repo-standards",
       "description": "Use when 新建仓库或补 CI、README、AGENTS.md 等文件；版本纪律（SemVer 大小版本判定）、git 提交规范、CHANGELOG 规范、技能升级感知也用它。触发词：新建仓库、项目规范、AGENTS.md、.gitignore、Woodpecker、GitHub Actions、Gitee 镜像、版本纪律。",
-      "version": "1.6.0",
-      "updated_at": "2026-11-12 20:46:35",
+      "version": "1.6.1",
+      "updated_at": "2026-11-13 17:09:59",
       "files": [
         "SKILL.md",
         "references/ci-coexistence.md",
         "references/upgrade-by-delivery-type.md"
       ],
       "sha256": {
-        "SKILL.md": "9d3f008d7a19d7691f9592d3c350489927cf986589cf3e24c3f26a13057eeaba",
+        "SKILL.md": "aedd2f72a26ba25154b56d6828c1217bfa897bcf4ffbb88a59e78e5b74841559",
         "references/ci-coexistence.md": "2ae6bfbb51a336ccbce179090d144a73fdb53a61d6a3a28175dbecdb53e46076",
         "references/upgrade-by-delivery-type.md": "307c7c0e34b64da37ac4d451ba811f6886aff51a8fdbcb0d75e8017ddcec975c"
       }
@@ -135,15 +135,15 @@
       }
     },
     {
-      "name": "skill-distribution",
-      "description": "Use when 发布通用技能到 /.well-known 或用 skillctl 给 agent 装/升级技能。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills。",
-      "version": "1.1.0",
-      "updated_at": "2026-11-12 20:46:57",
+      "name": "skill-ops",
+      "description": "Use when 新建/修订一个供多个 agent 使用的通用技能并发布到 /.well-known/skills（static-deploy，端口 8088）；或用 skillctl 给客户端安装/升级技能。覆盖编写规范、发布流程、版本纪律与 skillctl 用法。触发词：skillctl、技能安装、技能升级、技能分发、bootstrap、.well-known/skills、发布技能、新建技能、技能规范、sync_index、版本纪律、技能修改。",
+      "version": "1.0.0",
+      "updated_at": "2026-11-13 17:09:52",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
-        "SKILL.md": "b205cf82462e22f4bb22cd8cdaae8ce67e08f56b20f48df504a3fb571b0e5a35"
+        "SKILL.md": "cda377805d307f3e8d78e067092acc68de32f93594cb563a15f623f8b4c3f9ee"
       }
     },
     {
