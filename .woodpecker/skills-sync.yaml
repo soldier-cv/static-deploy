@@ -87,11 +87,13 @@ steps:
     commands:
       - apk add --no-cache wget python3
       - |
-        # 分发端部署由另一 workflow (sync-and-restart) 完成，存在时序差：加重试
-        for i in 1 2 3 4 5 6; do
-          JSON=$(wget -qO- http://172.17.0.1:8088/.well-known/skills/index.json) && break
-          sleep 10
+        # 分发端部署由另一并行 workflow (sync-and-restart) 完成，会重启 8088 容器：
+        # 重试窗口须覆盖部署期（约数分钟）
+        for i in $(seq 1 20); do
+          JSON=$(wget -q --timeout=10 -O- http://172.17.0.1:8088/.well-known/skills/index.json) && break
+          sleep 15
         done
+        [ -n "$JSON" ] || { echo "verify FAIL: index.json unreachable after retries"; exit 1; }
         python3 -c "
         import json, sys
         data = json.loads(sys.argv[1])
