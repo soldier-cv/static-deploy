@@ -2,7 +2,7 @@
 #
 # 触发：push 到 main 且 path 包含 skills/**，或手动触发（event: manual）。
 #
-# token secret：Woodpecker repo 16 预先创建名为 skills_git_token 的 secret
+# token secret：Woodpecker repo 16 预先创建名为 SKILLS_GIT_TOKEN 的 secret
 #   （events: push, manual，值为 GitHub token），mirror-push 步骤经
 #   environment.from_secret 注入为环境变量 SKILLS_GIT_TOKEN；
 #   yml 里只引用环境变量，token 不得落盘、不得持久化写入 remote url。
@@ -46,7 +46,7 @@ steps:
       - /opt/code/skills:/opt/code/skills
     environment:
       SKILLS_GIT_TOKEN:
-        from_secret: skills_git_token
+        from_secret: SKILLS_GIT_TOKEN
     commands:
       # sync_from_static_deploy.sh 依赖 bash/python3/rsync
       - apk add --no-cache git bash python3 rsync
