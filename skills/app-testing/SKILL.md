@@ -1,7 +1,7 @@
 ---
 name: app-testing
-description: Use when 需要对应用进行全链路测试验证：在前端未就绪时由 AI 驱动接口测试（tools/api-testing 脚手架、鉴权链、跑回归、跑冒烟、story 测试、造数验证与缺陷定位），或对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试（Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server 驱动多服务生命周期）。触发词：接口测试、测试包初始化、跑回归、跑冒烟、story 测试、tools/api-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。
-version: 1.0.0
+description: Use when 需要对应用进行全链路测试验证：在前端未就绪时由 AI 驱动接口测试（tools/api-testing 脚手架、鉴权链、跑回归、跑冒烟、story 测试、造数验证、按方案补测与漏测排查、缺陷定位），或对本地 Web 应用做端到端功能测试、DOM 元素交互与行为调试（Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server 驱动多服务生命周期）。触发词：接口测试、测试包初始化、跑回归、跑冒烟、回归红了、story 测试、造数验证、方案对照、补测、漏测、tools/api-testing、Playwright 测试、Web 功能测试、E2E 测试、DOM 交互、with_server。
+version: 1.1.0
 author: Hermes coding agent
 license: Apache-2.0
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 # 应用测试套件 (app-testing)
 
-> 版本记录：1.0.0 由 api-testing-toolkit v1.0.0 + webapp-testing v1.0.0 合并首发（2026-11-13）。
+> 版本记录：1.1.0 接口测试章新增「规格先行」不变量对照与 STOP 门禁、日志时间游标、环境熔断、文档防膨胀治理，并补「已定制项目禁止重铺脚手架」；1.0.0 由 api-testing-toolkit v1.0.0 + webapp-testing v1.0.0 合并首发（2026-11-13）。
 
 > **相关技能**：
 > - [ui-acceptance](../ui-acceptance/SKILL.md) — 统一 UI 验收体系（截图比对、视觉回归与前端交付审查）
@@ -39,6 +39,7 @@ metadata:
 
 - 项目内**已存在 `tools/api-testing`** → 可直接执行测试工作流(下文 B/C/D)。
 - 项目内**不存在**且用户要求初始化/搭测试能力 → 执行初始化工作流(下文 A)。
+- 项目内已有 `tools/api-testing` 但**被改造过**(自定义 MCP 工具 / 私有 CLI / 入口链路单源) → 以项目内 `README.md` 为准, 本技能只补方法论, **禁止重铺脚手架或覆盖既有定制**。
 - 都不满足(临时 HTTP 调试、其他项目) → 不使用本技能。
 
 ### A. 初始化工作流(每个项目一次性)
@@ -110,6 +111,27 @@ export const stories = [
 | 4 | 结论与缺陷(PASS/FAIL/定位) | 该链 `report/latest.md` + `defects.json`(open→fixed→verified/wontfix) |
 | 5 | 优化回写(下次怎么做更好) | 本技能/scaffold README 演进记录 |
 
+### 规格先行（有方案 / Code Review 时必做）
+
+接口全绿 ≠ 覆盖。每条业务不变量必须映射到 SQL / 日志 / 拦截断言，对照表留空行 = 未完成。
+
+| 不变量 | 要断言什么 | 只测这个就会漏 |
+|---|---|---|
+| 状态机 | 合法流转 + 至少一条非法流转被拦 | 只走 happy-path |
+| 归属/关联 | 方案点名的父单/原单/租户/渠道字段 | 断言「看起来像」的别名 |
+| 分项数值 | 有分项必断言分项，合计不代替拆分 | 只断言总额 |
+| 幂等 | 同一业务键：创建后一次 + 状态变化后一次 | 创建后不再提交 |
+| 负向 | 缺参 / 越权 / 禁止操作 / 错误渠道 | 无负向 |
+| 异步/补偿 | 重试、回表、通知：`wait_until` + 时间游标日志 | happy-path 代替重试 |
+| 非接口可测 | 锁顺序、事务是否包住 HTTP、并发窗口 | 标「测不了」就跳过（应转 Code Review） |
+
+STOP（未满足不许说「已覆盖」）：
+
+- **逆向迎合实现**：方案与代码不符 → 提缺陷，禁止按错误实现改断言。
+- **伪幂等**：打印 / 出纸 / 三方调用必须用 `Promise.all` 打毫秒级并发，断言阶段记录数严格 = 1。
+- **只测 happy-path**：未结账、特殊流转、取消等退出分支必须有断言。
+- **Review/联调修的 bug 没沉淀成回归断言**（改码不补测 = 未完成）。
+
 ### 断言与数据约定(必读)
 
 - 成功判定以项目响应约定为准(Hono 系: HTTP 状态码 + `{code,message}` 错误体; Java 系: codeField)。
@@ -121,9 +143,16 @@ export const stories = [
   ④默认不删测试数据(留库追溯), 用户明确要求才删, **严禁动真实业务数据**。
 - 下单/建资源所需数据走接口(fixture/api), `sql` 仅用于断言验证与查重。
 
+### 日志时间游标(异步 / 500 排查)
+
+1. 查日志**必须**带 `since` = 本 story 启动时间, 禁止全量盲扫。
+2. `grep` 绑定业务单号 / `AT-中文场景`, 禁止只 `grep=Exception`。
+3. 异步断言 `matchCount > 0` 且含业务键与成功态; >45s 无进度才按卡死处理。
+
 ### 安全红线
 
 - 凭据只在 `tools/api-testing/local/mcp-env.json`(gitignore), 严禁写入 story/docs/报告/提交。
+- **环境熔断**: 只连本地/Dev; 检测到生产主机名或生产库特征必须直接拒绝启动, 不靠「注意一下」。
 - `sql_exec`: 仅 INSERT/UPDATE 且表必须在 `dbSafety.writeTables` 白名单; UPDATE 必须带 WHERE;
   DELETE/DROP/TRUNCATE 一律禁止(可选开 `allowSafeDdl` 放行 ALTER/CREATE)。
 - 报告中 token 一律掩码(工具自动处理, 不要手工粘贴完整 token)。
@@ -136,6 +165,14 @@ export const stories = [
 - ❌ 用 AI 逐步重跑已固化的全套 story(用 `npm run test`)
 - ❌ 查库取下单/造数所需业务数据(走接口 fixture)
 - ❌ 未授权删库、白名单外表写入、凭据入库
+
+### 文档防膨胀（Agent 注意力预算）
+
+- 项目文档行数水位: 项目 `SKILL.md` ≤100 行、`README.md` ≤200、`api-reference.md` ≤300、`db-reference.md` ≤150; 超限先抽象再下沉。
+- Rule of Three: 同类现象在 3 个以上实体出现 → 提炼抽象规则, 禁止逐实体流水账。
+- 演进记录滑动窗口: 只留最近 6~8 条, 其余归档到 `docs/archive/`。
+- verified 缺陷物理出清: 断言留在 stories, 台账只留 active。
+- **入口单源**: 下单/建单等关键入口只在**一份**文档维护, 配脚本校验「文档 ↔ Controller」; 禁止在 SKILL / README 复制入口表——副本没有校验, 必然漂移。
 
 ### 随附资产对照（分发通道只放行 Markdown）
 
