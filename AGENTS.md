@@ -52,3 +52,10 @@
 - 同标题保留最新 3 版发生在 `/api/deploy` 写入时，不跑后台线程。标题分组键是 NFKC、去掉全部空白、再 casefold。`removed_old` 只出现在当次响应里
 - 删除目录前必须先在 meta 里命中该 id。`/api/orphans` 只报告 sites 里有、meta 里没有的目录（含手动放置的命名目录），不删除
 - `GET /api/health` 额外返回 `meta_disk_consistent` 与 `orphan_count`。`GET /api/projects` 每条带 `size_bytes`
+
+## 技能分发（2026-11-16 起）
+
+技能分发已迁出本仓库：`/.well-known/skills/` 直接对应 GitHub 仓库 soldier-cv/skills（唯一真源）。
+- 发布流程：改 /opt/code/skills（或远程 clone 该仓推送）→ `python3 skills/sync_index.py` → commit+push → 服务器 cron（每 10 分钟）`deploy_mirror.sh` 自动拉取并 rsync 到 /data/static-deploy/skills-mirror（nginx 挂载）。
+- skillctl.py 仍由本仓库 skills-client/ 提供。
+- 本仓库不再保存 skills/ 目录，禁止重新引入（防双真源）。
