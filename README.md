@@ -97,3 +97,21 @@ docker compose -f server/docker-compose.yml --env-file server/.env up -d
 > 请帮我做一个新的活动倒计时弹窗原型，并提交预览。
 
 Agent 完成开发后将自动调用 `deploy_static_project` 工具，并在聊天框直接向您回复可在手机上点击打开的预览 URL。
+
+---
+
+## 管理接口
+
+服务端仍是 Python 标准库。保留策略挂在部署写入上，对账是一次目录扫描，没有数据库，也没有后台线程。nginx 的 `location /api/` 已覆盖新路径，无需另加 location。
+
+| 方法 | 路径 | 行为 |
+|---|---|---|
+| POST | `/api/deploy` | 写入新版本。同一归一化标题只保留最新 3 版，更旧的目录和 meta 条目在本次请求里删除。响应含 `removed_old`（被删 id 列表，没有则为 `[]`）。有删除时向 `meta/cleanup.log` 追加一行 JSON，字段为 `ts`、`removed_ids`、`kept_ids` |
+| GET | `/api/projects` | 项目列表。每条增加 `size_bytes`（该 id 目录内普通文件大小之和，不含符号链接） |
+| DELETE | `/api/projects/<id>` | 仅当该 id 已在 meta 中时删除记录和目录。不存在的 id、以及未登记的命名目录，返回 404，目录保持不动 |
+| GET | `/api/orphans` | 扫描 `/data/sites/`（容器内）下存在但 meta 没有的目录，返回 `[{name, size_bytes, mtime}]`。只报告，不删除 |
+| GET | `/api/health` | 原有 `status`、`timestamp` 之外增加 `meta_disk_consistent`（meta 中每个 id 都有目录，且孤儿数为 0）和 `orphan_count` |
+
+标题归一化规则：NFKC（全角字母数字折成半角），去掉全部空白（普通空格、全角空格、换行、制表），再做 Unicode casefold。标点和汉字保留。因此 `活动页`、`活动 页`、`活　动页` 是同一组，`活动页` 与 `活动页 2` 不是同一组。
+
+看板 `portal.html`：每张卡片有删除按钮，确认后调用 DELETE，成功后从列表移除该卡。页头「存储用量」是各项目 `size_bytes` 之和。图标为 SVG。

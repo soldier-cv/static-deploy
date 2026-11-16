@@ -24,8 +24,11 @@ DATA_DIR = os.environ.get("DATA_DIR", "/data")
 SITES_DIR = os.path.join(DATA_DIR, "sites")
 META_DIR = os.path.join(DATA_DIR, "meta")
 META_FILE = os.path.join(META_DIR, "projects.json")
+CLEANUP_LOG = os.path.join(META_DIR, "cleanup.log")
 API_TOKEN = os.environ.get("API_TOKEN", "") or ""
 PORT = int(os.environ.get("PORT", "8089"))
+# 同一归一化标题最多保留的版本数。部署写入时顺带清理，不另起常驻任务。
+KEEP_PER_TITLE = 3
 
 os.environ.setdefault("TZ", "Asia/Shanghai")
 if hasattr(time, "tzset"):
@@ -93,21 +96,160 @@ def load_projects():
         raise RuntimeError("读取 projects.json 失败: %s" % e)
 
 
+def normalize_title(name):
+    """把标题收成可比较的分组键。
+
+    规则：NFKC（全角字母数字与兼容字符折成半角）后去掉全部空白
+    （含普通空格、全角空格、换行、制表），再做 Unicode 大小写折叠。
+    标点与汉字保留，空标题单独成组。
+    """
+    import unicodedata
+
+    text = "" if name is None else str(name)
+    text = unicodedata.normalize("NFKC", text)
+    text = "".join(ch for ch in text if not ch.isspace())
+    return text.casefold()
+
+
+def _created_sort_key(record):
+    created = record.get("created_at")
+    if isinstance(created, str) and created:
+        return (1, created)
+    return (0, "")
+
+
+def select_retention(projects, record):
+    """同归一化标题只留最新 KEEP_PER_TITLE 条（含即将写入的 record）。
+
+    调用方必须已持有 _meta_lock。排序键是 created_at 字符串（本地时间，
+    字典序即时间序）。时间相同时，即将写入的 record 排在旧条前面，
+    避免并发下把刚写入的版本当成旧版删掉。
+    返回 (新列表, 被移出的旧记录)。新列表仍是「最新在前」。
+    """
+    key = normalize_title(record.get("name"))
+    group = []
+    others = []
+    for item in projects:
+        if normalize_title(item.get("name")) == key:
+            group.append(item)
+        else:
+            others.append(item)
+    incoming = dict(record)
+    incoming["_incoming"] = True
+    ranked = sorted(
+        [incoming] + group,
+        key=lambda item: (_created_sort_key(item), 1 if item.get("_incoming") else 0),
+        reverse=True,
+    )
+    kept_group = []
+    for item in ranked[:KEEP_PER_TITLE]:
+        cleaned = dict(item)
+        cleaned.pop("_incoming", None)
+        kept_group.append(cleaned)
+    removed = ranked[KEEP_PER_TITLE:]
+    return kept_group + others, removed
+
+
+def _unlink_quiet(path):
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
 def save_projects(projects):
-    tmp_file = META_FILE + ".tmp"
-    with open(tmp_file, "w", encoding="utf-8") as f:
-        json.dump(projects, f, ensure_ascii=False, indent=2)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp_file, META_FILE)
+    tmp_file = META_FILE + ".tmp." + secrets.token_hex(4)
+    try:
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(projects, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_file, META_FILE)
+    except Exception:
+        _unlink_quiet(tmp_file)
+        raise
+
+
+def append_cleanup_log(removed_ids, kept_ids):
+    """追加一行 JSON。先把这一行写入临时文件再拼到日志末尾。
+
+    已有行只被读取后原样保留。追加中断时临时文件被删掉，
+    cleanup.log 里已经落盘的行不被改写。
+    """
+    line = json.dumps(
+        {
+            "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "removed_ids": list(removed_ids),
+            "kept_ids": list(kept_ids),
+        },
+        ensure_ascii=False,
+    )
+    payload = (line + "\n").encode("utf-8")
+    tmp_file = CLEANUP_LOG + ".tmp." + secrets.token_hex(4)
+    try:
+        with open(tmp_file, "wb") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        with open(CLEANUP_LOG, "ab") as dest:
+            with open(tmp_file, "rb") as src:
+                shutil.copyfileobj(src, dest)
+            dest.flush()
+            os.fsync(dest.fileno())
+    except Exception:
+        _unlink_quiet(tmp_file)
+        raise
+    _unlink_quiet(tmp_file)
+
+
+def remove_project_dir(project_id):
+    """只删除 id 形如已登记项目的站点目录。不跟随符号链接。"""
+    if not project_id or not isinstance(project_id, str):
+        return False
+    if not re.fullmatch(r"[a-zA-Z0-9_\-]+", project_id):
+        return False
+    project_dir = os.path.join(SITES_DIR, project_id)
+    if not os.path.lexists(project_dir):
+        return False
+    if os.path.islink(project_dir):
+        return False
+    if not os.path.isdir(project_dir):
+        return False
+    shutil.rmtree(project_dir)
+    return True
 
 
 def add_project_record(record):
+    """写入新记录并按标题保留最新 KEEP_PER_TITLE 版。
+
+    顺序：锁内改 meta（原子替换）然后锁外删旧目录，再记 cleanup.log。
+    meta 替换失败时旧列表与全部目录都还在。目录已删但日志追加失败时，
+    返回值里的 removed_old 仍然是这次删掉的 id。
+    """
     with _meta_lock:
         projects = load_projects()
-        projects.insert(0, record)
-        save_projects(projects)
-        return projects
+        new_projects, removed = select_retention(projects, record)
+        save_projects(new_projects)
+    removed_ids = [item.get("id") for item in removed if item.get("id")]
+    for project_id in removed_ids:
+        try:
+            remove_project_dir(project_id)
+        except Exception as e:
+            sys_stderr = __import__("sys").stderr
+            sys_stderr.write("[cleanup] 删除目录失败 %s: %s\n" % (project_id, e))
+    kept_ids = [
+        item.get("id")
+        for item in new_projects
+        if item.get("id")
+        and normalize_title(item.get("name")) == normalize_title(record.get("name"))
+    ]
+    if removed_ids:
+        try:
+            append_cleanup_log(removed_ids, kept_ids)
+        except Exception as e:
+            sys_stderr = __import__("sys").stderr
+            sys_stderr.write("[cleanup] 写 cleanup.log 失败: %s\n" % e)
+    return new_projects, removed_ids
 
 
 def delete_project_record(project_id):
@@ -119,6 +261,84 @@ def delete_project_record(project_id):
         new_projects = [p for p in projects if p.get("id") != project_id]
         save_projects(new_projects)
         return target
+
+
+def _dir_size_bytes(path):
+    total = 0
+    for root, _dirs, files in os.walk(path, followlinks=False):
+        for name in files:
+            file_path = os.path.join(root, name)
+            if os.path.islink(file_path):
+                continue
+            try:
+                total += os.path.getsize(file_path)
+            except OSError:
+                continue
+    return total
+
+
+def project_size_bytes(project_id):
+    if not project_id or not isinstance(project_id, str):
+        return 0
+    if not re.fullmatch(r"[a-zA-Z0-9_\-]+", project_id):
+        return 0
+    project_dir = os.path.join(SITES_DIR, project_id)
+    if os.path.islink(project_dir) or not os.path.isdir(project_dir):
+        return 0
+    return _dir_size_bytes(project_dir)
+
+
+def scan_orphans():
+    """sites 下有目录、meta 里没有对应 id 的条目。只报告，不删除。
+
+    符号链接与非目录项不算孤儿目录。meta 读失败时向上抛，避免把全体项目报成孤儿。
+    """
+    projects = load_projects()
+    known = set()
+    for item in projects:
+        project_id = item.get("id")
+        if isinstance(project_id, str) and project_id:
+            known.add(project_id)
+    if not os.path.isdir(SITES_DIR):
+        return []
+    found = []
+    for name in os.listdir(SITES_DIR):
+        if name in known:
+            continue
+        path = os.path.join(SITES_DIR, name)
+        if os.path.islink(path) or not os.path.isdir(path):
+            continue
+        try:
+            mtime = int(os.stat(path).st_mtime)
+        except OSError:
+            mtime = 0
+        found.append({
+            "name": name,
+            "size_bytes": _dir_size_bytes(path),
+            "mtime": mtime,
+        })
+    found.sort(key=lambda item: item["name"])
+    return found
+
+
+def meta_disk_status():
+    """meta 中每个 id 都有对应站点目录，且没有孤儿目录，才算一致。"""
+    projects = load_projects()
+    orphans = scan_orphans()
+    missing = False
+    for item in projects:
+        project_id = item.get("id")
+        if not isinstance(project_id, str) or not project_id:
+            missing = True
+            continue
+        if not re.fullmatch(r"[a-zA-Z0-9_\-]+", project_id):
+            missing = True
+            continue
+        path = os.path.join(SITES_DIR, project_id)
+        if os.path.islink(path) or not os.path.isdir(path):
+            missing = True
+    consistent = (not missing) and len(orphans) == 0
+    return consistent, len(orphans)
 
 
 def abs_url(path, host):
@@ -802,7 +1022,8 @@ def register_html_project(project_name, description, project_dir, project_id, en
         "created_at": created_at,
         "url": relative_url,
     }
-    add_project_record(record)
+    _projects, removed_ids = add_project_record(record)
+    record["removed_old"] = removed_ids
     return record, success_text("html", project_name, relative_url, host)
 
 
@@ -818,7 +1039,8 @@ def register_image_project(project_name, description, project_id, img_name, host
         "created_at": created_at,
         "url": relative_url,
     }
-    add_project_record(record)
+    _projects, removed_ids = add_project_record(record)
+    record["removed_old"] = removed_ids
     return record, success_text("image", project_name, relative_url, host)
 
 
@@ -1014,7 +1236,26 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             return
 
         if parsed.path in ("/api/health", "/health"):
-            self._send_json(200, {"status": "ok", "timestamp": int(time.time())})
+            try:
+                consistent, orphan_count = meta_disk_status()
+            except Exception as e:
+                self._send_json(500, {"error": str(e)})
+                return
+            self._send_json(200, {
+                "status": "ok",
+                "timestamp": int(time.time()),
+                "meta_disk_consistent": consistent,
+                "orphan_count": orphan_count,
+            })
+            return
+
+        if parsed.path == "/api/orphans":
+            try:
+                orphans = scan_orphans()
+            except Exception as e:
+                self._send_json(500, {"error": str(e)})
+                return
+            self._send_json(200, orphans)
             return
 
         if parsed.path == "/api/projects":
@@ -1028,6 +1269,7 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             for p in raw_projects:
                 rec = dict(p)
                 rec["abs_url"] = abs_url(p.get("url", "/"), host)
+                rec["size_bytes"] = project_size_bytes(p.get("id"))
                 projects.append(rec)
             self._send_json(200, projects)
             return
@@ -1060,14 +1302,17 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             return
 
         project_id = match.group(1)
+        # 先确认 id 在 meta 里再删目录。命名孤儿不在 meta 中，这里返回 404，目录保留。
         target = delete_project_record(project_id)
         if not target:
-            self._send_json(404, {"error": "Project not found"})
+            self._send_json(404, {"error": "Project not found", "id": project_id})
             return
 
-        project_dir = os.path.join(SITES_DIR, project_id)
-        if os.path.exists(project_dir):
-            shutil.rmtree(project_dir, ignore_errors=True)
+        try:
+            remove_project_dir(project_id)
+        except Exception as e:
+            self._send_json(500, {"error": "目录删除失败: %s" % e, "id": project_id})
+            return
         self._send_json(200, {"success": True, "deleted_id": project_id})
 
     def _handle_deploy(self):
@@ -1127,6 +1372,7 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
                 "abs_url": abs_url(record["url"], host),
                 "entry": record["entry"],
                 "created_at": record["created_at"],
+                "removed_old": record.get("removed_old") or [],
             })
         except ZipLimitError as e:
             _rollback_project_dir(project_dir)
