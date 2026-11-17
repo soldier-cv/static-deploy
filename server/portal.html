@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>项目演示总览中心 - 88 Server</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" type="image/svg+xml">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     :root {
@@ -40,6 +42,36 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    .project-check {
+      width: 0.95rem;
+      height: 0.95rem;
+      accent-color: #3b82f6;
+    }
+    .card-selected {
+      border-color: rgb(59 130 246 / 0.55);
+    }
+    .batch-bar {
+      z-index: 60;
+    }
+    .batch-modal {
+      z-index: 65;
+    }
+    .btn-danger {
+      background: #dc2626;
+      color: #fff;
+    }
+    .btn-danger:hover {
+      background: #ef4444;
+    }
+    button.sd-action:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #batchModal.hidden,
+    #batchBar.hidden,
+    #selectModeBtn.hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body class="bg-zinc-950 text-zinc-100 antialiased min-h-[100dvh]">
@@ -74,7 +106,10 @@
       </div>
 
       <!-- 右侧操作区 -->
-      <div class="flex items-center gap-2 self-start sm:self-auto">
+      <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+        <button id="selectModeBtn" type="button" onclick="enterSelectMode()" class="sd-action h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors active:scale-[0.98]">
+          多选
+        </button>
         <button id="viewToggleBtn" onclick="toggleDeviceView()" class="h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors flex items-center gap-1.5 active:scale-[0.98]">
           <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -168,7 +203,32 @@
 
   </div>
 
-  <div id="toast" role="status" class="hidden fixed bottom-4 right-4 z-[70] max-w-[min(100vw-2rem,24rem)] px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-zinc-100 shadow-lg break-all"></div>
+  <div id="toast" role="status" class="hidden fixed bottom-4 right-4 z-[70] max-w-[min(100vw-2rem,36rem)] max-h-48 overflow-auto px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-zinc-100 shadow-lg whitespace-pre-wrap break-words"></div>
+
+  <div id="batchBar" class="batch-bar hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[min(100vw-2rem,42rem)]">
+    <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl">
+      <span id="batchCount" class="text-xs text-zinc-200 font-medium">已选 0 项</span>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="batchSelectAll" type="button" onclick="selectAllVisible()" class="sd-action h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors active:scale-[0.98]">全选</button>
+        <button id="batchInvert" type="button" onclick="invertVisible()" class="sd-action h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors active:scale-[0.98]">反选</button>
+        <button id="batchDeleteBtn" type="button" onclick="openBatchConfirm()" class="sd-action btn-danger h-8 px-3 rounded-lg text-xs font-medium transition-colors active:scale-[0.98]">批量删除</button>
+        <button id="batchCancelBtn" type="button" onclick="exitSelectMode()" class="sd-action h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors active:scale-[0.98]">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="batchModal" class="batch-modal fixed inset-0 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
+      <h3 id="batchModalTitle" class="font-medium text-sm text-zinc-100">确认批量删除</h3>
+      <p id="batchModalHint" class="text-xs text-zinc-400 mt-1">将删除以下项目的目录与记录。</p>
+      <ul id="batchNameList" class="mt-3 max-h-48 overflow-auto rounded-lg border border-zinc-800 bg-zinc-950 text-xs text-zinc-200"></ul>
+      <p id="batchModalResult" class="hidden mt-3 text-xs text-zinc-300 whitespace-pre-wrap break-words"></p>
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button id="batchModalDismiss" type="button" onclick="closeBatchConfirm()" class="sd-action h-8 px-3 rounded-lg border border-zinc-800 text-xs font-medium text-zinc-300 hover:bg-zinc-800 transition-colors active:scale-[0.98]">返回</button>
+        <button id="batchModalOk" type="button" onclick="runBatchDelete()" class="sd-action btn-danger h-8 px-3 rounded-lg text-xs font-medium transition-colors active:scale-[0.98]">确认删除</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 预览模态框 -->
   <div id="previewModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-6">
@@ -280,6 +340,9 @@
     let searchQuery = '';
     let isMobileView = false;
     let toastTimer = null;
+    let selectMode = false;
+    let selectedIds = new Set();
+    let batchBusy = false;
 
     document.getElementById('resGrid').addEventListener('click', (ev) => {
       const btn = ev.target.closest('[data-copy]');
@@ -367,16 +430,89 @@
       }
     }
 
-    function renderProjects() {
-      const grid = document.getElementById('projectGrid');
-      const emptyState = document.getElementById('emptyState');
-      
-      const filtered = projects.filter(item => {
+    function visibleProjects() {
+      return projects.filter(item => {
         const matchFilter = currentFilter === 'all' || item.type === currentFilter;
         const q = searchQuery.toLowerCase();
         const matchSearch = !q || (item.name && item.name.toLowerCase().includes(q)) || (item.description && item.description.toLowerCase().includes(q));
         return matchFilter && matchSearch;
       });
+    }
+
+    function pruneSelection() {
+      const live = new Set();
+      projects.forEach(item => {
+        if (item && item.id) live.add(item.id);
+      });
+      Array.from(selectedIds).forEach(id => {
+        if (!live.has(id)) selectedIds.delete(id);
+      });
+    }
+
+    function selectedItems() {
+      const byId = new Map(projects.map(item => [item.id, item]));
+      const items = [];
+      selectedIds.forEach(id => {
+        const item = byId.get(id);
+        if (item) items.push(item);
+      });
+      return items;
+    }
+
+    function updateBatchBar() {
+      const n = selectedIds.size;
+      const visible = visibleProjects();
+      const noProjects = projects.length === 0;
+      const noVisible = visible.length === 0;
+      document.getElementById('batchCount').textContent = '已选 ' + n + ' 项';
+      document.getElementById('batchDeleteBtn').disabled = batchBusy || n === 0 || noProjects;
+      document.getElementById('batchSelectAll').disabled = batchBusy || noVisible;
+      document.getElementById('batchInvert').disabled = batchBusy || noVisible;
+      document.getElementById('batchCancelBtn').disabled = batchBusy;
+      const modeBtn = document.getElementById('selectModeBtn');
+      modeBtn.disabled = noProjects || batchBusy;
+      modeBtn.classList.toggle('hidden', selectMode);
+      document.getElementById('batchBar').classList.toggle('hidden', !selectMode);
+      document.getElementById('mainContainer').style.paddingBottom = selectMode ? '5.5rem' : '';
+    }
+
+    function enterSelectMode() {
+      if (batchBusy || projects.length === 0) return;
+      selectMode = true;
+      renderProjects();
+    }
+
+    function exitSelectMode() {
+      if (batchBusy) return;
+      selectMode = false;
+      selectedIds.clear();
+      closeBatchConfirm();
+      renderProjects();
+    }
+
+    function selectAllVisible() {
+      if (batchBusy) return;
+      visibleProjects().forEach(item => {
+        if (item && item.id) selectedIds.add(item.id);
+      });
+      renderProjects();
+    }
+
+    function invertVisible() {
+      if (batchBusy) return;
+      visibleProjects().forEach(item => {
+        if (!item || !item.id) return;
+        if (selectedIds.has(item.id)) selectedIds.delete(item.id);
+        else selectedIds.add(item.id);
+      });
+      renderProjects();
+    }
+
+    function renderProjects() {
+      const grid = document.getElementById('projectGrid');
+      const emptyState = document.getElementById('emptyState');
+      pruneSelection();
+      const filtered = visibleProjects();
 
       document.getElementById('count-all').innerText = projects.length;
       document.getElementById('count-html').innerText = projects.filter(p => p.type === 'html').length;
@@ -386,6 +522,8 @@
         const total = projects.reduce((sum, item) => sum + (Number(item.size_bytes) || 0), 0);
         usage.textContent = formatBytes(total);
       }
+
+      updateBatchBar();
 
       if (filtered.length === 0) {
         grid.innerHTML = '';
@@ -406,11 +544,18 @@
 
         const fullUrl = item.url.startsWith('http') ? item.url : window.location.origin + item.url;
 
+        const picked = selectMode && selectedIds.has(item.id);
+        const check = selectMode ? `
+              <label class="inline-flex items-center justify-center w-8 h-8 -ml-1 cursor-pointer flex-shrink-0">
+                <input type="checkbox" class="project-check" data-id="${escapeHtml(item.id)}" ${picked ? 'checked' : ''} aria-label="选择 ${escapeHtml(item.name || item.id)}" />
+              </label>` : '';
+
         return `
-          <div class="bg-zinc-900/70 border border-zinc-800/80 rounded-xl p-4 sm:p-5 hover:border-zinc-700 transition-colors flex flex-col justify-between">
+          <div data-project-card="${escapeHtml(item.id)}" class="bg-zinc-900/70 border ${picked ? 'card-selected' : 'border-zinc-800/80'} rounded-xl p-4 sm:p-5 hover:border-zinc-700 transition-colors flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between gap-2 mb-2.5">
                 <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                  ${check}
                   ${typeBadge}
                 </div>
                 <span class="text-xs text-zinc-500 whitespace-nowrap flex-shrink-0 font-normal">
@@ -571,21 +716,145 @@
       return (value / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
     }
 
+    function deleteFailureReason(res, body) {
+      if (res && res.status === 401) return '未授权';
+      if (res && res.status === 404) return '项目不存在';
+      if (body && body.error) return String(body.error);
+      return '删除失败 (' + ((res && res.status) || 0) + ')';
+    }
+
+    async function requestDelete(id) {
+      const opts = { method: 'DELETE' };
+      if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        opts.signal = AbortSignal.timeout(30000);
+      }
+      const res = await fetch('/api/projects/' + encodeURIComponent(id), opts);
+      let body = {};
+      try { body = await res.json(); } catch (err) { body = {}; }
+      return { res: res, body: body, ok: !!(res.ok && body && body.success) };
+    }
+
+    function fillNameList(items) {
+      const list = document.getElementById('batchNameList');
+      list.innerHTML = '';
+      items.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = 'px-3 py-2 break-words';
+        if (index > 0) li.style.borderTop = '1px solid #27272a';
+        li.textContent = item.name || item.id;
+        list.appendChild(li);
+      });
+    }
+
+    function openBatchConfirm() {
+      if (batchBusy || selectedIds.size === 0 || projects.length === 0) return;
+      const items = selectedItems();
+      if (items.length === 0) return;
+      fillNameList(items);
+      document.getElementById('batchModalHint').textContent = '将删除以下 ' + items.length + ' 个项目的目录与记录。';
+      const result = document.getElementById('batchModalResult');
+      result.textContent = '';
+      result.classList.add('hidden');
+      const okBtn = document.getElementById('batchModalOk');
+      okBtn.disabled = false;
+      okBtn.classList.remove('hidden');
+      okBtn.textContent = '确认删除';
+      const dismiss = document.getElementById('batchModalDismiss');
+      dismiss.disabled = false;
+      dismiss.textContent = '返回';
+      document.getElementById('batchModal').classList.remove('hidden');
+    }
+
+    function closeBatchConfirm() {
+      if (batchBusy) return;
+      document.getElementById('batchModal').classList.add('hidden');
+      document.getElementById('batchModalOk').disabled = false;
+      document.getElementById('batchModalOk').textContent = '确认删除';
+      document.getElementById('batchModalDismiss').disabled = false;
+      document.getElementById('batchModalDismiss').textContent = '返回';
+      const result = document.getElementById('batchModalResult');
+      result.textContent = '';
+      result.classList.add('hidden');
+    }
+
+    async function runBatchDelete() {
+      if (batchBusy) return;
+      const targets = selectedItems();
+      if (targets.length === 0) return;
+      batchBusy = true;
+      updateBatchBar();
+      const okBtn = document.getElementById('batchModalOk');
+      const dismiss = document.getElementById('batchModalDismiss');
+      okBtn.disabled = true;
+      dismiss.disabled = true;
+      okBtn.textContent = '正在删除';
+
+      let success = 0;
+      const failed = [];
+      // 逐条调用现有单删。某一条 404、未授权或网络失败时继续后面的 id。
+      for (let i = 0; i < targets.length; i++) {
+        const item = targets[i];
+        const name = item.name || item.id;
+        try {
+          const outcome = await requestDelete(item.id);
+          if (!outcome.ok) {
+            failed.push({ id: item.id, name: name, reason: deleteFailureReason(outcome.res, outcome.body) });
+            continue;
+          }
+          success += 1;
+          selectedIds.delete(item.id);
+          projects = projects.filter(p => p.id !== item.id);
+        } catch (err) {
+          failed.push({ id: item.id, name: name, reason: '请求失败' });
+        }
+      }
+
+      await fetchProjects();
+      batchBusy = false;
+
+      if (failed.length === 0) {
+        closeBatchConfirm();
+        if (selectedIds.size === 0) selectMode = false;
+        renderProjects();
+        showToast('已删除 ' + success + ' 个项目', 2500);
+        return;
+      }
+
+      failed.forEach(item => {
+        if (projects.some(p => p.id === item.id)) selectedIds.add(item.id);
+      });
+      selectMode = true;
+      fillNameList(failed.map(item => ({ id: item.id, name: item.name + '（' + item.reason + '）' })));
+      document.getElementById('batchModalHint').textContent = '成功 ' + success + ' 个，失败 ' + failed.length + ' 个。失败项如下。';
+      const result = document.getElementById('batchModalResult');
+      result.textContent = failed.map(item => item.name + '（' + item.reason + '）').join('\n');
+      result.classList.remove('hidden');
+      okBtn.disabled = true;
+      okBtn.textContent = '确认删除';
+      dismiss.disabled = false;
+      dismiss.textContent = '知道了';
+      renderProjects();
+      showToast(
+        '成功 ' + success + ' 个，失败 ' + failed.length + ' 个\n' + failed.map(item => item.name + '（' + item.reason + '）').join('\n'),
+        6000
+      );
+    }
+
     async function deleteProject(id) {
+      if (batchBusy) return;
       const item = projects.find(p => p.id === id);
       if (!item) return;
       const name = item.name || id;
       const ok = window.confirm('确认删除「' + name + '」？此操作会移除该版本的目录与记录。');
       if (!ok) return;
       try {
-        const res = await fetch('/api/projects/' + encodeURIComponent(id), { method: 'DELETE' });
-        let body = {};
-        try { body = await res.json(); } catch (err) { body = {}; }
-        if (!res.ok || !body.success) {
-          const reason = body.error || ('删除失败 (' + res.status + ')');
+        const outcome = await requestDelete(id);
+        if (!outcome.ok) {
+          const reason = (outcome.body && outcome.body.error) || ('删除失败 (' + outcome.res.status + ')');
           showToast(reason);
           return;
         }
+        selectedIds.delete(id);
         projects = projects.filter(p => p.id !== id);
         renderProjects();
         showToast('已删除 ' + name);
@@ -594,12 +863,13 @@
       }
     }
 
-    function showToast(message) {
+    function showToast(message, duration) {
       const el = document.getElementById('toast');
       el.textContent = message;
       el.classList.remove('hidden');
+      el.style.bottom = selectMode ? '5.5rem' : '';
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.add('hidden'), 2000);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), duration || 2000);
     }
 
     function selectNode(node) {
@@ -664,6 +934,31 @@
         tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
       );
     }
+
+    document.getElementById('projectGrid').addEventListener('change', (ev) => {
+      const box = ev.target;
+      if (!box || !box.classList || !box.classList.contains('project-check')) return;
+      const id = box.getAttribute('data-id');
+      if (!id || batchBusy) {
+        if (id) box.checked = selectedIds.has(id);
+        return;
+      }
+      if (box.checked) selectedIds.add(id);
+      else selectedIds.delete(id);
+      const card = box.closest('[data-project-card]');
+      if (card) card.classList.toggle('card-selected', box.checked);
+      updateBatchBar();
+    });
+
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape') return;
+      const modal = document.getElementById('batchModal');
+      if (modal && !modal.classList.contains('hidden')) {
+        closeBatchConfirm();
+        return;
+      }
+      if (selectMode) exitSelectMode();
+    });
 
     // 页面加载触发数据获取
     fetchProjects();
