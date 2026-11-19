@@ -9,6 +9,7 @@ import io
 import json
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -41,8 +42,19 @@ def create_zip_from_path(source_path):
     return zip_buffer.read()
 
 
-def send_deploy_request(file_bytes, project_name, description, project_type="html", entry_file="index.html"):
-    """向 88 服务器发送部署请求"""
+def _project_header(project):
+    """X-Project 服务端不 unquote。latin-1 能装下就原样送，否则 quote 成 ASCII。"""
+    if not isinstance(project, str):
+        raise RuntimeError("project 必须是字符串")
+    try:
+        project.encode("latin-1")
+    except UnicodeEncodeError:
+        return urllib.parse.quote(project, safe="")
+    return project
+
+
+def send_deploy_request(file_bytes, project_name, description, project_type="html", entry_file="index.html", project=None):
+    """向 88 服务器发送部署请求。project 为 None 时不传 X-Project，行为与以前相同。"""
     url = f"{API_BASE_URL}/api/deploy"
     headers = {
         "X-Project-Name": urllib.parse.quote(project_name),
@@ -52,13 +64,19 @@ def send_deploy_request(file_bytes, project_name, description, project_type="htm
         "Content-Type": "application/octet-stream",
         "Content-Length": str(len(file_bytes))
     }
+    if project is not None:
+        headers["X-Project"] = _project_header(project)
     if API_TOKEN:
         headers["Authorization"] = f"Bearer {API_TOKEN}"
 
     req = urllib.request.Request(url, data=file_bytes, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        res_data = resp.read().decode("utf-8")
-        return json.loads(res_data)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            res_data = resp.read().decode("utf-8")
+            return json.loads(res_data)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError("部署失败 HTTP %s: %s" % (e.code, body))
 
 
 def fetch_projects():
@@ -76,7 +94,7 @@ def fetch_projects():
 TOOLS = [
     {
         "name": "deploy_static_project",
-        "description": "【核心工具】将本机开发的静态原型（HTML/CSS/JS/图片文件夹或单HTML文件）打包上传至局域网 88 服务器（100.64.0.88），并返回可在手机端直接打开的局域网在线预览链接与二维码访问地址。",
+        "description": "【核心工具】将本机开发的静态原型（HTML/CSS/JS/图片文件夹或单HTML文件）打包上传至局域网 88 服务器（100.64.0.88），并返回可在手机端直接打开的局域网在线预览链接与二维码访问地址。迭代修改同一原型必须复用同一个 project（稳定 slug），主链接 /sites/<slug>/ 保持不变，上一版转存到 /sites/<slug>/versions/<版本号>/，每个 project 只留最近 3 版快照。不传 project 时每次生成新 id，按标题保留最新 3 版。只有真正不同的方案才不传 project 或另起新 slug。",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -84,9 +102,13 @@ TOOLS = [
                     "type": "string",
                     "description": "本地原型文件或目录的绝对路径，例如: D:\\project\\cart_demo 或 D:\\project\\demo\\index.html"
                 },
+                "project": {
+                    "type": "string",
+                    "description": "稳定项目 slug，可选。迭代同一原型时必须复用同一个值。只允许小写字母、数字和短横线，长度 1 到 64，不能以短横线开头或结尾。禁止路径字符。非法值会报错而不是另建站点。不传则每次新 id，按标题保留最新 3 版。"
+                },
                 "project_name": {
                     "type": "string",
-                    "description": "项目的中文名称，例如: '生鲜电商购物车移动端原型'"
+                    "description": "项目的中文名称，例如: '生鲜电商购物车移动端原型'。同一 project 下可以改，不会因此换链接。"
                 },
                 "description": {
                     "type": "string",
@@ -141,13 +163,19 @@ def handle_tool_call(name, args):
         project_name = args.get("project_name")
         description = args.get("description")
         entry_file = args.get("entry_file", "index.html")
+        project = args.get("project", None)
+        if project is not None and not isinstance(project, str):
+            return {"error": "project 必须是字符串"}
 
         if not os.path.exists(source_path):
             return {"error": f"找不到本地路径: {source_path}"}
 
         # 打包上传
         zip_bytes = create_zip_from_path(source_path)
-        res = send_deploy_request(zip_bytes, project_name, description, project_type="html", entry_file=entry_file)
+        res = send_deploy_request(
+            zip_bytes, project_name, description,
+            project_type="html", entry_file=entry_file, project=project,
+        )
 
         full_preview_url = f"{API_BASE_URL}{res['url']}"
         portal_url = f"{API_BASE_URL}/"
@@ -159,6 +187,8 @@ def handle_tool_call(name, args):
             f"总览控制台地址：{portal_url}\n\n"
             f"（只要手机处于局域网 Wi-Fi 下，点击上方链接即可在手机上秒开体验该原型）"
         )
+        if res.get("version") is not None:
+            reply_text += "\n版本：%s\n快照：%s" % (res.get("version"), res.get("snapshot_count", 0))
         return {"content": [{"type": "text", "text": reply_text}], "url": full_preview_url}
 
     elif name == "upload_image":
@@ -192,7 +222,10 @@ def handle_tool_call(name, args):
         lines = ["局域网 88 服务器近期项目列表：\n"]
         for p in projects[:10]:
             p_url = f"{API_BASE_URL}{p['url']}"
-            lines.append(f"- 【{p.get('name', '未命名')}】 ({p.get('created_at', '')})")
+            version_note = ""
+            if p.get("project") and p.get("version") is not None:
+                version_note = " v%s" % p.get("version")
+            lines.append(f"- 【{p.get('name', '未命名')}】{version_note} ({p.get('created_at', '')})")
             lines.append(f"  说明: {p.get('description', '无')}")
             lines.append(f"  直达链接: {p_url}\n")
         return {"content": [{"type": "text", "text": "\n".join(lines)}]}

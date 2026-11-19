@@ -25,10 +25,17 @@ SITES_DIR = os.path.join(DATA_DIR, "sites")
 META_DIR = os.path.join(DATA_DIR, "meta")
 META_FILE = os.path.join(META_DIR, "projects.json")
 CLEANUP_LOG = os.path.join(META_DIR, "cleanup.log")
+# 覆盖写的临时树放在站点目录外。nginx 只挂 /sites/，半成品不会被访问到。
+STAGING_DIR = os.path.join(DATA_DIR, "staging")
 API_TOKEN = os.environ.get("API_TOKEN", "") or ""
 PORT = int(os.environ.get("PORT", "8089"))
 # 同一归一化标题最多保留的版本数。部署写入时顺带清理，不另起常驻任务。
 KEEP_PER_TITLE = 3
+# 稳定 project 的历史快照份数。当前版在站点根，不计入这 3 份。
+KEEP_SNAPSHOTS = 3
+PROJECT_SLUG_MAX = 64
+VERSIONS_DIRNAME = "versions"
+_PROJECT_SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$")
 
 os.environ.setdefault("TZ", "Asia/Shanghai")
 if hasattr(time, "tzset"):
@@ -71,9 +78,13 @@ MCP_INSTRUCTIONS = (
     "达到或超过 200KB 的原型、含图片或字体的目录、解码后达到或超过 3MB 的图片，"
     "改用 HTTP POST /api/deploy（zip 或图片原始字节，请求体上限 100MB，内容不进对话）。"
     "MCP 内容硬上限 20MB。服务端读不到调用方磁盘。"
+    "迭代修改同一原型必须复用同一个 project slug，主链接才不变；"
+    "只有真正不同的方案才不传 project 或另起新 slug。"
 )
 
 _meta_lock = threading.Lock()
+_project_locks_guard = threading.Lock()
+_project_locks = {}
 
 os.makedirs(SITES_DIR, exist_ok=True)
 os.makedirs(META_DIR, exist_ok=True)
@@ -111,6 +122,60 @@ def normalize_title(name):
     return text.casefold()
 
 
+class ProjectSlugError(ValueError):
+    """project slug 不合法，或与已有目录冲突。调用方应把它当成 400。"""
+
+
+def _slug_preview(slug):
+    text = slug.replace("\r", "\\r").replace("\n", "\\n")
+    if len(text) > 80:
+        return text[:80] + "..."
+    return text
+
+
+def validate_project_slug(value):
+    """稳定 slug。非法值抛 ProjectSlugError，不改写、不建目录。
+
+    允许小写字母、数字和短横线，长度 1 到 64，且不能以短横线开头或结尾。
+    路径分隔符、`..`、绝对路径、大写、下划线、点号一律拒绝。
+    """
+    if not isinstance(value, str):
+        raise ProjectSlugError("project 必须是字符串")
+    slug = value.strip()
+    if slug == "":
+        raise ProjectSlugError("project 不能为空")
+    if (
+        any(ch in slug for ch in ("/", "\\", "\x00"))
+        or slug.startswith("~")
+        or ".." in slug
+    ):
+        raise ProjectSlugError("project 含有路径字符，已拒绝: %s" % _slug_preview(slug))
+    if len(slug) > PROJECT_SLUG_MAX:
+        raise ProjectSlugError("project 长度超过 %d: %d" % (PROJECT_SLUG_MAX, len(slug)))
+    if not _PROJECT_SLUG_RE.fullmatch(slug):
+        raise ProjectSlugError(
+            "project 只允许小写字母、数字和短横线，长度 1 到 %d，"
+            "且不能以短横线开头或结尾。收到: %s" % (PROJECT_SLUG_MAX, _slug_preview(slug))
+        )
+    return slug
+
+
+def _is_project_slot(item):
+    if not isinstance(item, dict):
+        return False
+    project = item.get("project")
+    return isinstance(project, str) and project.strip() != ""
+
+
+def _project_lock(slug):
+    with _project_locks_guard:
+        lock = _project_locks.get(slug)
+        if lock is None:
+            lock = threading.Lock()
+            _project_locks[slug] = lock
+        return lock
+
+
 def _created_sort_key(record):
     created = record.get("created_at")
     if isinstance(created, str) and created:
@@ -130,6 +195,10 @@ def select_retention(projects, record):
     group = []
     others = []
     for item in projects:
+        # 带 project 的稳定槽位不参与按标题清理，避免换标题时把固定链接删掉。
+        if _is_project_slot(item):
+            others.append(item)
+            continue
         if normalize_title(item.get("name")) == key:
             group.append(item)
         else:
@@ -225,7 +294,10 @@ def add_project_record(record):
     顺序：锁内改 meta（原子替换）然后锁外删旧目录，再记 cleanup.log。
     meta 替换失败时旧列表与全部目录都还在。目录已删但日志追加失败时，
     返回值里的 removed_old 仍然是这次删掉的 id。
+    带 project 的稳定槽位走 publish_project，不进这里。
     """
+    if _is_project_slot(record):
+        raise ValueError("稳定 project 记录不能走按标题保留")
     with _meta_lock:
         projects = load_projects()
         new_projects, removed = select_retention(projects, record)
@@ -250,6 +322,377 @@ def add_project_record(record):
             sys_stderr = __import__("sys").stderr
             sys_stderr.write("[cleanup] 写 cleanup.log 失败: %s\n" % e)
     return new_projects, removed_ids
+
+
+def _rmtree_quiet(path):
+    if not path or not os.path.lexists(path):
+        return
+    if os.path.islink(path):
+        _unlink_quiet(path)
+        return
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def _site_dir(slug):
+    """slug 已经过校验。仍要求结果是 SITES_DIR 的直接子目录。"""
+    live = os.path.abspath(os.path.join(SITES_DIR, slug))
+    root = os.path.abspath(SITES_DIR)
+    if os.path.dirname(live) != root or os.path.basename(live) != slug:
+        raise ProjectSlugError("project 路径越界")
+    return live
+
+
+def _find_project_slot(projects, slug):
+    for item in projects:
+        if isinstance(item, dict) and item.get("id") == slug and item.get("project") == slug:
+            return item
+    return None
+
+
+def _same_project_slot(item, slug):
+    if not isinstance(item, dict):
+        return False
+    return item.get("id") == slug or item.get("project") == slug
+
+
+def _record_version(record):
+    if not record:
+        return 0
+    value = record.get("version")
+    if isinstance(value, bool):
+        return 1
+    if isinstance(value, int) and value >= 1:
+        return value
+    if isinstance(value, str) and value.isdigit() and int(value) >= 1:
+        return int(value)
+    return 1
+
+
+def _project_conflict(projects, slug, live):
+    if os.path.islink(live):
+        return "拒绝覆盖符号链接: %s" % slug
+    for item in projects:
+        if not isinstance(item, dict):
+            continue
+        if item.get("id") == slug and item.get("project") != slug:
+            return "project 与已有站点 id 冲突，该 id 不是稳定 project: %s" % slug
+        if item.get("project") == slug and item.get("id") != slug:
+            return "project 记录的 id 与 slug 不一致: %s" % slug
+    if _find_project_slot(projects, slug) is None and os.path.lexists(live):
+        return "目录已存在但 meta 中没有该 project，拒绝覆盖: %s" % slug
+    return None
+
+
+def _project_commit_conflict(projects, slug, previous):
+    """目录已经换完，这里只核对 meta，不再用目录是否存在判断冲突。"""
+    for item in projects:
+        if not isinstance(item, dict):
+            continue
+        if item.get("id") == slug and item.get("project") != slug:
+            return "project 与已有站点 id 冲突: %s" % slug
+        if item.get("project") == slug and item.get("id") != slug:
+            return "project 记录的 id 与 slug 不一致: %s" % slug
+    current = _find_project_slot(projects, slug)
+    if previous is None:
+        if current is not None:
+            return "project 在写入期间被占用: %s" % slug
+        return None
+    if current is None:
+        return "project 记录在写入期间消失: %s" % slug
+    if _record_version(current) != _record_version(previous):
+        return "project 版本在写入期间变化: %s" % slug
+    return None
+
+
+def _copy_tree(src, dst, skip_top_name=None):
+    """把 src 拷进 dst。跳过符号链接。文件先写临时名再 os.replace。"""
+    src = os.path.abspath(src)
+    dst = os.path.abspath(dst)
+    os.makedirs(dst, exist_ok=True)
+    for dirpath, dirnames, filenames in os.walk(src, followlinks=False):
+        rel = os.path.relpath(dirpath, src)
+        kept = []
+        for name in dirnames:
+            if rel == "." and skip_top_name and name == skip_top_name:
+                continue
+            if os.path.islink(os.path.join(dirpath, name)):
+                continue
+            kept.append(name)
+        dirnames[:] = kept
+        if rel == ".":
+            target_dir = dst
+        else:
+            target_dir = os.path.join(dst, rel)
+            if not is_within_dir(target_dir, dst):
+                dirnames[:] = []
+                continue
+            os.makedirs(target_dir, exist_ok=True)
+        for name in filenames:
+            src_file = os.path.join(dirpath, name)
+            if os.path.islink(src_file) or not os.path.isfile(src_file):
+                continue
+            target = os.path.join(target_dir, name)
+            if not is_within_dir(target, dst):
+                continue
+            tmp = target + ".partial." + secrets.token_hex(3)
+            try:
+                shutil.copyfile(src_file, tmp)
+                os.replace(tmp, target)
+            except Exception:
+                _unlink_quiet(tmp)
+                raise
+
+
+def _live_has_payload(live):
+    if os.path.islink(live) or not os.path.isdir(live):
+        return False
+    for name in os.listdir(live):
+        if name != VERSIONS_DIRNAME:
+            return True
+    return False
+
+
+def _disk_snapshot_versions(live):
+    vdir = os.path.join(live, VERSIONS_DIRNAME)
+    if os.path.islink(vdir) or not os.path.isdir(vdir):
+        return []
+    found = []
+    for name in os.listdir(vdir):
+        if not re.fullmatch(r"[1-9][0-9]{0,8}", name):
+            continue
+        path = os.path.join(vdir, name)
+        if os.path.islink(path) or not os.path.isdir(path):
+            continue
+        found.append(int(name))
+    found.sort()
+    return found
+
+
+def _snapshot_url(slug, version, entry):
+    entry = (entry or "index.html").replace("\\", "/").lstrip("/")
+    return "/sites/%s/%s/%s/%s" % (slug, VERSIONS_DIRNAME, version, entry)
+
+
+def _stage_history(staging, live, slug, previous):
+    """把上一版正文和仍要保留的快照放进 staging/versions。当前正文不进快照。"""
+    if previous is None:
+        return [], []
+    prev_version = _record_version(previous)
+    meta_by_ver = {}
+    for item in previous.get("snapshots") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            ver = int(item.get("version"))
+        except (TypeError, ValueError):
+            continue
+        if ver < 1:
+            continue
+        entry = item.get("entry") or previous.get("entry") or "index.html"
+        meta_by_ver[ver] = {
+            "version": ver,
+            "created_at": item.get("created_at") or "",
+            "entry": entry,
+            "name": item.get("name") or "",
+            "url": _snapshot_url(slug, ver, entry),
+        }
+    created = False
+    if _live_has_payload(live):
+        dest = os.path.join(staging, VERSIONS_DIRNAME, str(prev_version))
+        _copy_tree(live, dest, skip_top_name=VERSIONS_DIRNAME)
+        entry = previous.get("entry") or "index.html"
+        meta_by_ver[prev_version] = {
+            "version": prev_version,
+            "created_at": previous.get("updated_at") or previous.get("created_at") or "",
+            "entry": entry,
+            "name": previous.get("name") or "",
+            "url": _snapshot_url(slug, prev_version, entry),
+        }
+        created = True
+    disk_versions = _disk_snapshot_versions(live) if os.path.isdir(live) and not os.path.islink(live) else []
+    all_versions = set(disk_versions)
+    if created:
+        all_versions.add(prev_version)
+    ordered = sorted(all_versions)
+    kept = ordered[-KEEP_SNAPSHOTS:] if len(ordered) > KEEP_SNAPSHOTS else ordered
+    removed = [ver for ver in ordered if ver not in kept]
+    kept_set = set(kept)
+    for ver in kept:
+        if created and ver == prev_version:
+            continue
+        src = os.path.join(live, VERSIONS_DIRNAME, str(ver))
+        if os.path.isdir(src) and not os.path.islink(src):
+            _copy_tree(src, os.path.join(staging, VERSIONS_DIRNAME, str(ver)))
+        if ver not in meta_by_ver:
+            entry = previous.get("entry") or "index.html"
+            meta_by_ver[ver] = {
+                "version": ver,
+                "created_at": "",
+                "entry": entry,
+                "name": previous.get("name") or "",
+                "url": _snapshot_url(slug, ver, entry),
+            }
+    snapshots = [meta_by_ver[ver] for ver in sorted(kept_set, reverse=True) if ver in meta_by_ver]
+    return snapshots, removed
+
+
+def _rollback_uncommitted(live, staging, trash, hold, moved_live, moved_in):
+    """把站点目录恢复成换目录之前。新树挪走后删除，旧树从 trash 搬回。"""
+    if moved_in and os.path.lexists(live):
+        if os.path.lexists(hold):
+            _rmtree_quiet(hold)
+        os.replace(live, hold)
+    if moved_live and os.path.lexists(trash) and not os.path.lexists(live):
+        os.replace(trash, live)
+    _rmtree_quiet(hold)
+    _rmtree_quiet(staging)
+    if os.path.lexists(trash) and os.path.lexists(live):
+        _rmtree_quiet(trash)
+
+
+def _commit_project_record(record, previous):
+    slug = record["project"]
+    with _meta_lock:
+        projects = load_projects()
+        conflict = _project_commit_conflict(projects, slug, previous)
+        if conflict:
+            raise ProjectSlugError(conflict)
+        others = [item for item in projects if not _same_project_slot(item, slug)]
+        save_projects([record] + others)
+
+
+def publish_project(slug, populate, describe):
+    """用固定 slug 覆盖站点根，并把上一版转成快照。
+
+    同一 slug 的并发部署串行。新内容先写到 DATA_DIR/staging（nginx 不挂载），
+    再用 os.replace 换成完整目录，避免站点根出现半份文件。
+    meta 仍是临时文件加 os.replace。meta 失败时把目录换回去。
+    快照只留最近 KEEP_SNAPSHOTS 份，轮转只删 versions/<旧号>，不碰当前正文。
+    """
+    slug = validate_project_slug(slug)
+    live = _site_dir(slug)
+    lock = _project_lock(slug)
+    with lock:
+        with _meta_lock:
+            projects = load_projects()
+            conflict = _project_conflict(projects, slug, live)
+            if conflict:
+                raise ProjectSlugError(conflict)
+            previous = _find_project_slot(projects, slug)
+
+        os.makedirs(STAGING_DIR, exist_ok=True)
+        token = secrets.token_hex(4)
+        staging = os.path.join(STAGING_DIR, "%s-%s" % (slug, token))
+        trash = os.path.join(STAGING_DIR, "trash-%s-%s" % (slug, token))
+        hold = os.path.join(STAGING_DIR, "hold-%s-%s" % (slug, token))
+        moved_live = False
+        moved_in = False
+        rolled_back = False
+
+        def rollback_once():
+            nonlocal moved_live, moved_in, rolled_back
+            if rolled_back:
+                return
+            _rollback_uncommitted(live, staging, trash, hold, moved_live, moved_in)
+            moved_live = False
+            moved_in = False
+            rolled_back = True
+
+        try:
+            os.makedirs(staging)
+            populate(staging)
+            if os.path.lexists(os.path.join(staging, VERSIONS_DIRNAME)):
+                raise ProjectSlugError("部署内容不能包含保留目录 versions")
+            fields = describe(staging)
+            for key in ("name", "description", "type", "entry"):
+                if not isinstance(fields.get(key), str) or fields.get(key) == "":
+                    raise ToolError("发布字段缺失: %s" % key)
+            snapshots, removed = _stage_history(staging, live, slug, previous)
+            if os.path.lexists(live):
+                os.replace(live, trash)
+                moved_live = True
+            os.replace(staging, live)
+            moved_in = True
+            now = time.strftime("%Y-%m-%d %H:%M:%S")
+            created = now
+            if previous and isinstance(previous.get("created_at"), str) and previous.get("created_at"):
+                created = previous["created_at"]
+            prev_version = _record_version(previous) if previous else 0
+            record = {
+                "id": slug,
+                "project": slug,
+                "name": fields["name"],
+                "description": fields["description"],
+                "type": fields["type"],
+                "entry": fields["entry"],
+                "created_at": created,
+                "updated_at": now,
+                "url": "/sites/%s/%s" % (slug, fields["entry"]),
+                "version": (prev_version + 1) if previous else 1,
+                "snapshot_count": len(snapshots),
+                "snapshots": snapshots,
+            }
+            try:
+                _commit_project_record(record, previous)
+            except Exception:
+                rollback_once()
+                raise
+        except Exception:
+            try:
+                rollback_once()
+            except Exception as restore_error:
+                raise RuntimeError("发布失败且回滚目录失败: %s" % restore_error)
+            raise
+        _rmtree_quiet(trash)
+        record["removed_old"] = []
+        record["removed_snapshots"] = removed
+        return record
+
+
+def _html_fields(staging, name, description, entry_file):
+    saved = resolve_entry(staging, entry_file)
+    if not saved:
+        raise ToolError("未找到可用的 HTML 入口（根目录 entry_file / 深度不超过 2 的 index.html 或 .html）")
+    return {
+        "name": name,
+        "description": description,
+        "type": "html",
+        "entry": saved,
+    }
+
+
+def _image_fields(staging, name, description, img_name):
+    path = os.path.join(staging, img_name)
+    if os.path.islink(path) or not os.path.isfile(path) or not is_within_dir(path, staging):
+        raise ToolError("图片未写入")
+    return {
+        "name": name,
+        "description": description,
+        "type": "image",
+        "entry": img_name,
+    }
+
+
+def deploy_response(record, host):
+    """不带 project 时键集合与原来一致。带 project 时追加版本和快照。"""
+    body = {
+        "success": True,
+        "project_id": record["id"],
+        "name": record["name"],
+        "url": record["url"],
+        "abs_url": abs_url(record["url"], host),
+        "entry": record["entry"],
+        "created_at": record["created_at"],
+        "removed_old": record.get("removed_old") or [],
+    }
+    if record.get("project"):
+        body["project"] = record["project"]
+        body["version"] = record["version"]
+        body["snapshot_count"] = record["snapshot_count"]
+        body["snapshots"] = record.get("snapshots") or []
+        body["updated_at"] = record.get("updated_at") or record.get("created_at")
+        body["removed_snapshots"] = record.get("removed_snapshots") or []
+    return body
 
 
 def delete_project_record(project_id):
@@ -885,11 +1328,20 @@ def decode_image_base64(value):
             raise ValueError("image_base64 非法")
 
 
-def success_text(kind, project_name, file_url, host):
+def success_text(kind, project_name, file_url, host, version=None, snapshot_count=None):
     title = "上传成功" if kind == "image" else "部署成功"
     preview = abs_url(file_url, host)
     board = abs_url("/", host)
-    return "%s\n项目: %s\n手机直达: %s\n看板: %s" % (title, project_name, preview, board)
+    lines = [
+        title,
+        "项目: %s" % project_name,
+        "手机直达: %s" % preview,
+        "看板: %s" % board,
+    ]
+    if version is not None:
+        lines.append("版本: %s" % version)
+        lines.append("快照: %s" % (0 if snapshot_count is None else snapshot_count))
+    return "\n".join(lines)
 
 
 MCP_TOOLS = [
@@ -913,13 +1365,26 @@ MCP_TOOLS = [
             "-H \"X-Project-Type: html\" -H \"X-Entry-File: index.html\" "
             "--data-binary @site.zip。"
             "本工具硬上限：内容总量 20MB（20971520 字节）。超过会被拒绝，并提示改走 HTTP 直传。"
+            "迭代修改同一原型必须传同一个 project（稳定 slug），主链接 /sites/<slug>/ 保持不变，"
+            "上一版自动转存到 /sites/<slug>/versions/<版本号>/，每个 project 只留最近 3 版快照。"
+            "不传 project 时每次生成新 id，按标题保留最新 3 版。"
+            "只有真正不同的方案才不传 project，或另起一个新 slug。不要为了同一次迭代去改标题。"
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
+                "project": {
+                    "type": "string",
+                    "description": (
+                        "稳定项目 slug，可选。迭代同一原型时必须复用同一个值。"
+                        "只允许小写字母、数字和短横线，长度 1 到 64，不能以短横线开头或结尾。"
+                        "禁止路径字符。非法值会报错而不是另建站点。"
+                        "不传则每次新 id，按标题保留最新 3 版。"
+                    ),
+                },
                 "project_name": {
                     "type": "string",
-                    "description": "项目名称",
+                    "description": "项目名称，给人看的标题。同一 project 下可以改，不会因此换链接。",
                 },
                 "description": {
                     "type": "string",
@@ -1044,6 +1509,19 @@ def register_image_project(project_name, description, project_id, img_name, host
     return record, success_text("image", project_name, relative_url, host)
 
 
+def _optional_project_argument(args):
+    """参数缺省或 JSON null 表示不启用稳定 slug。空串和非法值报错。"""
+    if "project" not in args or args.get("project") is None:
+        return None
+    raw = args.get("project")
+    if not isinstance(raw, str):
+        raise ToolError("project 必须是字符串")
+    try:
+        return validate_project_slug(raw)
+    except ProjectSlugError as e:
+        raise ToolError(str(e))
+
+
 def mcp_deploy_static_project(args, host):
     if not isinstance(args, dict):
         raise ToolError("arguments 必须是对象")
@@ -1076,6 +1554,25 @@ def mcp_deploy_static_project(args, host):
             raise ToolError("files 必须是对象")
         if not files_map:
             raise ToolError("files 不能为空")
+
+    slug = _optional_project_argument(args)
+    if slug:
+        def populate(dest, files_map=files_map):
+            write_files_map(dest, files_map)
+
+        def describe(dest, entry_file=entry_file, project_name=project_name, description=description):
+            return _html_fields(dest, project_name, description, entry_file)
+
+        try:
+            record = publish_project(slug, populate, describe)
+        except ToolError:
+            raise
+        except ValueError as e:
+            raise ToolError(str(e))
+        text = success_text(
+            "html", project_name, record["url"], host, record.get("version"), record.get("snapshot_count")
+        )
+        return text, record
 
     project_id = new_project_id()
     project_dir = os.path.join(SITES_DIR, project_id)
@@ -1153,9 +1650,12 @@ def mcp_list_projects(host):
     lines = []
     for p in projects:
         name = p.get("name", "未命名")
-        created = p.get("created_at", "")
+        created = p.get("updated_at") or p.get("created_at") or ""
         url = abs_url(p.get("url", "/"), host)
-        lines.append("- %s (%s) %s" % (name, created, url))
+        if p.get("project"):
+            lines.append("- %s (v%s, %s) %s" % (name, p.get("version") or 1, created, url))
+        else:
+            lines.append("- %s (%s) %s" % (name, created, url))
     return "\n".join(lines)
 
 
@@ -1172,7 +1672,7 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
         self.send_header(
             "Access-Control-Allow-Headers",
             "Content-Type, Accept, Authorization, Mcp-Session-Id, MCP-Protocol-Version, "
-            "X-Project-Name, X-Project-Desc, X-Project-Type, X-Entry-File",
+            "X-Project, X-Project-Name, X-Project-Desc, X-Project-Type, X-Entry-File",
         )
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Expose-Headers", "Mcp-Session-Id")
@@ -1340,10 +1840,22 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             return
 
         file_bytes = self.rfile.read(content_length)
+        host = self._host()
+        raw_project = self.headers.get("X-Project")
+        if raw_project is not None:
+            try:
+                project_slug = validate_project_slug(raw_project)
+            except ProjectSlugError as e:
+                self._send_json(400, {"error": str(e)})
+                return
+            self._deploy_into_project(
+                project_slug, project_type, entry_file, project_name, project_desc, file_bytes, host
+            )
+            return
+
         project_id = new_project_id()
         project_dir = os.path.join(SITES_DIR, project_id)
         os.makedirs(project_dir, exist_ok=True)
-        host = self._host()
 
         try:
             if project_type == "image":
@@ -1364,16 +1876,7 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
                     project_name, project_desc, project_dir, project_id, entry_file, host
                 )
 
-            self._send_json(200, {
-                "success": True,
-                "project_id": record["id"],
-                "name": record["name"],
-                "url": record["url"],
-                "abs_url": abs_url(record["url"], host),
-                "entry": record["entry"],
-                "created_at": record["created_at"],
-                "removed_old": record.get("removed_old") or [],
-            })
+            self._send_json(200, deploy_response(record, host))
         except ZipLimitError as e:
             _rollback_project_dir(project_dir)
             self._send_json(400, e.to_dict())
@@ -1382,6 +1885,42 @@ class DeployHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(400, {"error": str(e)})
         except Exception as e:
             _rollback_project_dir(project_dir)
+            self._send_json(500, {"error": "处理失败: %s" % str(e)})
+
+    def _deploy_into_project(self, slug, project_type, entry_file, project_name, project_desc, file_bytes, host):
+        try:
+            if project_type == "image":
+                img_name = sanitize_filename(entry_file or "image.png")
+                if not img_name:
+                    raise ValueError("非法文件名")
+
+                def populate(dest, img_name=img_name, file_bytes=file_bytes):
+                    img_path = os.path.join(dest, img_name)
+                    if not is_within_dir(img_path, dest):
+                        raise ValueError("非法文件名")
+                    with open(img_path, "wb") as f:
+                        f.write(file_bytes)
+
+                def describe(dest, img_name=img_name):
+                    return _image_fields(dest, project_name, project_desc, img_name)
+            else:
+                def populate(dest, file_bytes=file_bytes):
+                    extract_zip_safely(file_bytes, dest)
+
+                def describe(dest, entry_file=entry_file):
+                    return _html_fields(dest, project_name, project_desc, entry_file)
+
+            record = publish_project(slug, populate, describe)
+            self._send_json(200, deploy_response(record, host))
+        except ZipLimitError as e:
+            self._send_json(400, e.to_dict())
+        except ProjectSlugError as e:
+            self._send_json(400, {"error": str(e)})
+        except ToolError as e:
+            self._send_json(400, {"error": str(e)})
+        except ValueError as e:
+            self._send_json(400, {"error": str(e)})
+        except Exception as e:
             self._send_json(500, {"error": "处理失败: %s" % str(e)})
 
     def _mcp_session_headers(self):

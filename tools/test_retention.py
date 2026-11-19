@@ -7,6 +7,7 @@
 import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -278,6 +279,496 @@ class RetentionCase(unittest.TestCase):
         with open(r.CLEANUP_LOG, encoding="utf-8") as f:
             lines = [json.loads(line) for line in f if line.strip()]
         self.assertEqual(lines[-1]["removed_ids"], removed)
+
+
+class ProjectSlotCase(unittest.TestCase):
+    """稳定 project slug：覆盖写、快照轮转，以及不传 project 时的旧行为。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="sd-project-")
+        self.receiver = _load_receiver(self.tmp)
+        self.httpd = None
+        self.base = None
+
+    def tearDown(self):
+        if self.httpd is not None:
+            self.httpd.shutdown()
+            self.httpd.server_close()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _start(self):
+        r = self.receiver
+        self.httpd = r.ThreadingHTTPServer(("127.0.0.1", 0), r.DeployHandler)
+        port = self.httpd.server_address[1]
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.base = "http://127.0.0.1:%s" % port
+
+    def _call(self, method, path, data=None, headers=None):
+        req = urllib.request.Request(
+            self.base + path, data=data, headers=headers or {}, method=method
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = resp.read()
+                body = json.loads(raw.decode("utf-8") or "null") if raw else None
+                return resp.status, body
+        except urllib.error.HTTPError as e:
+            raw = e.read()
+            e.close()
+            body = {}
+            if raw:
+                try:
+                    body = json.loads(raw.decode("utf-8"))
+                except json.JSONDecodeError:
+                    body = {"error": raw.decode("utf-8", errors="replace")}
+            return e.code, body
+
+    def _zip(self, files):
+        blob = io.BytesIO()
+        with zipfile.ZipFile(blob, "w") as zf:
+            for name, content in files.items():
+                zf.writestr(name, content)
+        return blob.getvalue()
+
+    def _header(self, value):
+        text = "" if value is None else str(value)
+        try:
+            text.encode("latin-1")
+            return text
+        except UnicodeEncodeError:
+            return urllib.parse.quote(text)
+
+    def _deploy(self, name, files, project=None, entry="index.html", project_type="html"):
+        headers = {
+            "Content-Type": "application/zip" if project_type != "image" else "application/octet-stream",
+            "X-Project-Name": name,
+            "X-Project-Desc": "d",
+            "X-Project-Type": project_type,
+            "X-Entry-File": entry,
+        }
+        if project is not None:
+            headers["X-Project"] = self._header(project)
+        headers["X-Project-Name"] = self._header(name)
+        headers["X-Project-Desc"] = self._header(headers["X-Project-Desc"])
+        if project_type == "image":
+            payload = files if isinstance(files, bytes) else files["index.html"].encode("utf-8")
+        else:
+            payload = self._zip(files)
+        return self._call("POST", "/api/deploy", data=payload, headers=headers)
+
+    def _mcp_deploy(self, arguments):
+        status, body = self._call(
+            "POST",
+            "/mcp",
+            data=json.dumps({
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {"name": "deploy_static_project", "arguments": arguments},
+            }).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
+        return status, body
+
+    def test_slug_rejects_traversal_absolute_long_and_illegal(self):
+        r = self.receiver
+        validate = r.validate_project_slug
+        rejected = [
+            "../etc",
+            "..",
+            ".",
+            "/etc/passwd",
+            "/tmp/sd-abs-pwn",
+            "foo/bar",
+            "foo\\bar",
+            "a/../../x",
+            "..%2F..%2Ftmp%2Fpwn",
+            "What-Cooks",
+            "A",
+            "a_b",
+            "a.b",
+            "a b",
+            "-abc",
+            "abc-",
+            "",
+            " ",
+            "a" * 65,
+            "项目",
+            "what-cooks\nset",
+            "~root",
+            "foo\x00bar",
+            "versions/1",
+        ]
+        for raw in rejected:
+            with self.assertRaises(r.ProjectSlugError, msg=raw):
+                validate(raw)
+        self.assertEqual(validate("what-cooks"), "what-cooks")
+        self.assertEqual(validate(" a-b1 "), "a-b1")
+        self.assertEqual(validate("a"), "a")
+        self.assertEqual(validate("a" * 64), "a" * 64)
+        self.assertEqual(validate("a--b"), "a--b")
+
+        self._start()
+        parent = os.path.dirname(os.path.abspath(r.SITES_DIR))
+        sites_before = set(os.listdir(r.SITES_DIR))
+        parent_before = set(os.listdir(parent))
+        http_cases = [
+            "../etc",
+            "/tmp/sd-abs-pwn",
+            "a" * 65,
+            "What-Cooks",
+            "foo/bar",
+            "a_b",
+            "a.b",
+            "..\\..\\tmp\\pwn",
+            "",
+        ]
+        for raw in http_cases:
+            status, body = self._deploy("bad", {"index.html": "<html>no</html>"}, project=raw)
+            self.assertEqual(status, 400, (raw, body))
+            self.assertIn("project", (body.get("error") or "").lower() + str(body))
+            self.assertFalse(os.path.exists("/tmp/sd-abs-pwn"))
+            self.assertFalse(os.path.exists(os.path.join(parent, "etc")))
+        self.assertEqual(set(os.listdir(r.SITES_DIR)), sites_before)
+        self.assertEqual(set(os.listdir(parent)), parent_before)
+        status, rpc = self._mcp_deploy({
+            "project": "../etc",
+            "project_name": "bad",
+            "description": "bad",
+            "html": "<html>no</html>",
+        })
+        self.assertEqual(status, 200, rpc)
+        result = (rpc or {}).get("result") or {}
+        self.assertTrue(result.get("isError"), rpc)
+        self.assertIn("project", result.get("content", [{}])[0].get("text", ""))
+        self.assertEqual(set(os.listdir(r.SITES_DIR)), sites_before)
+
+    def test_five_deploys_keep_one_record_and_three_snapshots(self):
+        r = self.receiver
+        self._start()
+        urls = []
+        created = None
+        for i in range(1, 6):
+            files = {"index.html": "<html>v%d</html>" % i}
+            if i == 1:
+                files["only1.js"] = "only1"
+            if i == 4:
+                files["keep4.txt"] = "keep4"
+            status, body = self._deploy("标题方案%d" % i, files, project="what-cooks")
+            self.assertEqual(status, 200, body)
+            self.assertEqual(body["project"], "what-cooks")
+            self.assertEqual(body["project_id"], "what-cooks")
+            self.assertEqual(body["url"], "/sites/what-cooks/index.html")
+            self.assertEqual(body["version"], i)
+            self.assertEqual(body["snapshot_count"], min(i - 1, 3))
+            self.assertEqual(body["removed_old"], [])
+            self.assertIsInstance(body["version"], int)
+            urls.append(body["abs_url"])
+            if i == 1:
+                created = body["created_at"]
+            else:
+                self.assertEqual(body["created_at"], created)
+                self.assertTrue(body.get("updated_at"))
+        self.assertEqual(len(set(urls)), 1)
+        projects = r.load_projects()
+        slotted = [p for p in projects if p.get("id") == "what-cooks" or p.get("project") == "what-cooks"]
+        self.assertEqual(len(slotted), 1)
+        rec = slotted[0]
+        self.assertEqual(rec["project"], "what-cooks")
+        self.assertEqual(rec["version"], 5)
+        self.assertEqual(rec["snapshot_count"], 3)
+        self.assertEqual(len(rec["snapshots"]), 3)
+        self.assertEqual([s["version"] for s in rec["snapshots"]], [4, 3, 2])
+        self.assertEqual(rec["snapshots"][0]["url"], "/sites/what-cooks/versions/4/index.html")
+        self.assertEqual(rec["name"], "标题方案5")
+        root = os.path.join(r.SITES_DIR, "what-cooks")
+        with open(os.path.join(root, "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "<html>v5</html>")
+        self.assertFalse(os.path.exists(os.path.join(root, "only1.js")))
+        self.assertFalse(os.path.exists(os.path.join(root, "keep4.txt")))
+        self.assertFalse(os.path.isdir(os.path.join(root, "versions", "5")))
+        self.assertFalse(os.path.isdir(os.path.join(root, "versions", "1")))
+        for ver, text in ((2, "v2"), (3, "v3"), (4, "v4")):
+            snap = os.path.join(root, "versions", str(ver), "index.html")
+            with open(snap, encoding="utf-8") as f:
+                self.assertEqual(f.read(), "<html>%s</html>" % text)
+            self.assertFalse(os.path.isdir(os.path.join(root, "versions", str(ver), "versions")))
+        with open(os.path.join(root, "versions", "4", "keep4.txt"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "keep4")
+        with open(os.path.join(root, "versions", "2", "index.html"), encoding="utf-8") as f:
+            self.assertNotIn("v5", f.read())
+        staging = os.path.join(r.DATA_DIR, "staging")
+        if os.path.isdir(staging):
+            self.assertEqual(os.listdir(staging), [])
+
+    def test_without_project_keeps_title_retention(self):
+        r = self.receiver
+        self._start()
+        ids = []
+        for i in range(4):
+            status, body = self._deploy("Curl Title", {"index.html": "<html>%d</html>" % i})
+            self.assertEqual(status, 200, body)
+            self.assertEqual(set(body.keys()), {
+                "success", "project_id", "name", "url", "abs_url",
+                "entry", "created_at", "removed_old",
+            })
+            self.assertNotIn("project", body)
+            self.assertNotIn("version", body)
+            self.assertTrue(body["project_id"].startswith("p-"))
+            ids.append(body["project_id"])
+        self.assertEqual(len(set(ids)), 4)
+        projects = [p for p in r.load_projects() if p.get("name") == "Curl Title"]
+        self.assertEqual(len(projects), 3)
+        kept = {p["id"] for p in projects}
+        self.assertNotIn(ids[0], kept)
+        self.assertTrue(all("project" not in p for p in projects))
+        self.assertFalse(os.path.isdir(os.path.join(r.SITES_DIR, ids[0])))
+        self.assertTrue(os.path.isdir(os.path.join(r.SITES_DIR, ids[-1])))
+
+    def test_project_slot_is_independent_of_title_retention(self):
+        r = self.receiver
+        self._start()
+        status, body = self._deploy("活动页", {"index.html": "<html>stable</html>"}, project="cook-page")
+        self.assertEqual(status, 200, body)
+        removed = []
+        for i in range(4):
+            status, body = self._deploy("活 动页", {"index.html": "<html>t%d</html>" % i})
+            self.assertEqual(status, 200, body)
+            removed.extend(body["removed_old"])
+        self.assertNotIn("cook-page", removed)
+        projects = r.load_projects()
+        ids = [p["id"] for p in projects]
+        self.assertIn("cook-page", ids)
+        titled = [p for p in projects if p.get("id") != "cook-page"]
+        self.assertEqual(len(titled), 3)
+        self.assertTrue(all(not p.get("project") for p in titled))
+        with open(os.path.join(r.SITES_DIR, "cook-page", "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "<html>stable</html>")
+        self.assertEqual(len([p for p in projects if p.get("project") == "cook-page"]), 1)
+
+    def test_snapshot_rotate_does_not_delete_current_under_concurrency(self):
+        r = self.receiver
+        self._start()
+        status, body = self._deploy("seed", {"index.html": "V99"}, project="conc-page")
+        self.assertEqual(status, 200, body)
+        barrier = threading.Barrier(8)
+        errors = []
+        seen = []
+        stop = threading.Event()
+
+        def writer(i):
+            try:
+                barrier.wait(timeout=5)
+                status_i, body_i = self._deploy(
+                    "并发%d" % i,
+                    {"index.html": "V%02d" % i},
+                    project="conc-page",
+                )
+                if status_i != 200:
+                    errors.append("status %s %s" % (status_i, body_i))
+                    return
+                if body_i.get("url") != "/sites/conc-page/index.html":
+                    errors.append("url %s" % body_i.get("url"))
+            except Exception as e:  # noqa: BLE001
+                errors.append(repr(e))
+
+        def reader():
+            live = os.path.join(r.SITES_DIR, "conc-page", "index.html")
+            while not stop.is_set():
+                try:
+                    with open(live, encoding="utf-8") as f:
+                        data = f.read()
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    continue
+                if not re.fullmatch(r"V\d\d", data or ""):
+                    errors.append("partial:%r" % data)
+                    return
+                seen.append(data)
+                try:
+                    with open(r.META_FILE, encoding="utf-8") as f:
+                        parsed = json.load(f)
+                    if not isinstance(parsed, list):
+                        errors.append("meta not list")
+                        return
+                except FileNotFoundError:
+                    continue
+                except json.JSONDecodeError as e:
+                    errors.append("meta corrupt %s" % e)
+                    return
+
+        threads = [threading.Thread(target=writer, args=(i,)) for i in range(8)]
+        watcher = threading.Thread(target=reader)
+        watcher.start()
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=20)
+        stop.set()
+        watcher.join(timeout=5)
+        self.assertEqual(errors, [])
+        projects = [p for p in r.load_projects() if p.get("project") == "conc-page"]
+        self.assertEqual(len(projects), 1)
+        rec = projects[0]
+        self.assertEqual(rec["version"], 9)
+        self.assertEqual(rec["snapshot_count"], 3)
+        root = os.path.join(r.SITES_DIR, "conc-page")
+        with open(os.path.join(root, "index.html"), encoding="utf-8") as f:
+            live = f.read()
+        self.assertRegex(live, r"^V\d\d$")
+        self.assertFalse(os.path.isdir(os.path.join(root, "versions", "9")))
+        snap_dirs = sorted(
+            name for name in os.listdir(os.path.join(root, "versions"))
+            if os.path.isdir(os.path.join(root, "versions", name))
+        )
+        self.assertEqual(snap_dirs, ["6", "7", "8"])
+        markers = {live}
+        for name in snap_dirs:
+            with open(os.path.join(root, "versions", name, "index.html"), encoding="utf-8") as f:
+                markers.add(f.read())
+        self.assertEqual(len(markers), 4)
+        self.assertNotIn("V99", markers)
+        staging = os.path.join(r.DATA_DIR, "staging")
+        if os.path.isdir(staging):
+            self.assertEqual(os.listdir(staging), [])
+        self.assertTrue(seen)
+
+    def test_meta_replace_failure_restores_previous_tree(self):
+        r = self.receiver
+        self._start()
+        status, body = self._deploy("v1", {"index.html": "<html>v1</html>"}, project="keep-slug")
+        self.assertEqual(status, 200, body)
+        with open(r.META_FILE, "rb") as f:
+            before = f.read()
+        real_replace = r.os.replace
+
+        def boom(src, dst):
+            if os.path.abspath(dst) == os.path.abspath(r.META_FILE):
+                raise OSError("disk")
+            return real_replace(src, dst)
+
+        with mock.patch.object(r.os, "replace", side_effect=boom):
+            status, body = self._deploy("v2", {"index.html": "<html>v2</html>"}, project="keep-slug")
+        self.assertNotEqual(status, 200, body)
+        with open(r.META_FILE, "rb") as f:
+            after = f.read()
+        self.assertEqual(before, after)
+        with open(os.path.join(r.SITES_DIR, "keep-slug", "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "<html>v1</html>")
+        self.assertFalse(os.path.isdir(os.path.join(r.SITES_DIR, "keep-slug", "versions")))
+        projects = r.load_projects()
+        self.assertEqual(projects[0]["version"], 1)
+        leftovers = [name for name in os.listdir(r.META_DIR) if ".tmp." in name]
+        self.assertEqual(leftovers, [])
+        staging = os.path.join(r.DATA_DIR, "staging")
+        if os.path.isdir(staging):
+            self.assertEqual(os.listdir(staging), [])
+
+    def test_corrupt_projects_json_is_not_cleared(self):
+        r = self.receiver
+        r.add_project_record({
+            "id": "p-keep",
+            "name": "keep",
+            "description": "t",
+            "type": "html",
+            "entry": "index.html",
+            "created_at": "2026-01-01 00:00:00",
+            "url": "/sites/p-keep/index.html",
+        })
+        broken = b"{not-json"
+        with open(r.META_FILE, "wb") as f:
+            f.write(broken)
+        with self.assertRaises(RuntimeError):
+            r.load_projects()
+        self._start()
+        status, body = self._deploy("x", {"index.html": "<html>a</html>"})
+        self.assertEqual(status, 500, body)
+        status, body = self._deploy("x", {"index.html": "<html>b</html>"}, project="cook-page")
+        self.assertEqual(status, 500, body)
+        with open(r.META_FILE, "rb") as f:
+            after = f.read()
+        self.assertEqual(after, broken)
+        self.assertNotEqual(after.strip(), b"[]")
+        self.assertFalse(os.path.isdir(os.path.join(r.SITES_DIR, "cook-page")))
+
+    def test_versions_payload_and_foreign_dir_do_not_clobber(self):
+        r = self.receiver
+        self._start()
+        status, body = self._deploy("v1", {"index.html": "<html>v1</html>"}, project="safe-slug")
+        self.assertEqual(status, 200, body)
+        status, body = self._deploy(
+            "v2",
+            {"index.html": "<html>v2</html>", "versions/evil.html": "pwn"},
+            project="safe-slug",
+        )
+        self.assertEqual(status, 400, body)
+        with open(os.path.join(r.SITES_DIR, "safe-slug", "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "<html>v1</html>")
+        self.assertFalse(os.path.exists(os.path.join(r.SITES_DIR, "safe-slug", "versions", "evil.html")))
+        self.assertEqual(r.load_projects()[0]["version"], 1)
+
+        orphan = os.path.join(r.SITES_DIR, "manual-slug")
+        os.makedirs(orphan, exist_ok=True)
+        with open(os.path.join(orphan, "marker.txt"), "w", encoding="utf-8") as f:
+            f.write("keep")
+        status, body = self._deploy("x", {"index.html": "<html>no</html>"}, project="manual-slug")
+        self.assertEqual(status, 400, body)
+        with open(os.path.join(orphan, "marker.txt"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "keep")
+
+        taken = os.path.join(r.SITES_DIR, "taken-slug")
+        os.makedirs(taken, exist_ok=True)
+        with open(os.path.join(taken, "index.html"), "w", encoding="utf-8") as f:
+            f.write("old")
+        r.add_project_record({
+            "id": "taken-slug",
+            "name": "占用",
+            "description": "t",
+            "type": "html",
+            "entry": "index.html",
+            "created_at": "2026-04-01 00:00:00",
+            "url": "/sites/taken-slug/index.html",
+        })
+        status, body = self._deploy("x", {"index.html": "<html>no</html>"}, project="taken-slug")
+        self.assertEqual(status, 400, body)
+        with open(os.path.join(taken, "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "old")
+
+    def test_mcp_project_reuses_url(self):
+        self._start()
+        first = self._mcp_deploy({
+            "project": "mcp-cook",
+            "project_name": "首页收敛版",
+            "description": "第一轮",
+            "html": "<html>one</html>",
+        })
+        second = self._mcp_deploy({
+            "project": "mcp-cook",
+            "project_name": "首页7套配色",
+            "description": "第二轮",
+            "html": "<html>two</html>",
+        })
+        self.assertEqual(first[0], 200, first[1])
+        self.assertEqual(second[0], 200, second[1])
+        text1 = first[1]["result"]["content"][0]["text"]
+        text2 = second[1]["result"]["content"][0]["text"]
+        self.assertNotIn("isError", first[1]["result"])
+        self.assertFalse(second[1]["result"].get("isError"))
+        self.assertIn("/sites/mcp-cook/index.html", text1)
+        self.assertIn("/sites/mcp-cook/index.html", text2)
+        self.assertIn("版本: 2", text2)
+        self.assertIn("快照: 1", text2)
+        root = os.path.join(self.receiver.SITES_DIR, "mcp-cook")
+        with open(os.path.join(root, "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "<html>two</html>")
+        with open(os.path.join(root, "versions", "1", "index.html"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "<html>one</html>")
+        slotted = [p for p in self.receiver.load_projects() if p.get("project") == "mcp-cook"]
+        self.assertEqual(len(slotted), 1)
 
 
 if __name__ == "__main__":

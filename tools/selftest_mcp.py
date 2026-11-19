@@ -11,6 +11,31 @@ import urllib.request
 DEFAULT_BASE = "http://127.0.0.1:8088"
 META_FILE = os.environ.get("SELFTEST_META_FILE", "/data/static-deploy/meta/projects.json")
 DATA_ROOT = "/data/static-deploy"
+
+
+def load_api_token():
+    """服务端 API_TOKEN 非空时，DELETE /api/projects 需要 Bearer。不打印 token。"""
+    token = os.environ.get("API_TOKEN", "") or ""
+    if token:
+        return token
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server", ".env")
+    if not os.path.isfile(env_path):
+        return ""
+    try:
+        with open(env_path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                if key.strip() == "API_TOKEN":
+                    return value.strip().strip('"').strip("'")
+    except OSError:
+        return ""
+    return ""
+
+
+API_TOKEN = load_api_token()
 PNG_1X1_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X89QAAAAASUVORK5CYII="
 )
@@ -36,6 +61,8 @@ class Tester:
     def request(self, method, path, data=None, headers=None, timeout=30):
         url = path if path.startswith("http") else self.base + path
         hdrs = dict(headers or {})
+        if API_TOKEN and "Authorization" not in hdrs:
+            hdrs["Authorization"] = "Bearer " + API_TOKEN
         body = None
         if data is not None:
             if isinstance(data, bytes):

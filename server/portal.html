@@ -592,6 +592,29 @@ Check your Browserslist config to be sure that your targets are set up correctly
       renderProjects();
     }
 
+    function projectVersionNote(item) {
+      if (!item || !item.project) return '';
+      const version = item.version || 1;
+      const count = item.snapshot_count != null
+        ? item.snapshot_count
+        : (Array.isArray(item.snapshots) ? item.snapshots.length : 0);
+      const snaps = Array.isArray(item.snapshots) ? item.snapshots : [];
+      const links = snaps.map(snap => {
+        if (!snap || !snap.url) return '';
+        const label = 'v' + (snap.version != null ? snap.version : '');
+        return `<a class="text-blue-400 hover:text-blue-300" href="${escapeHtml(snap.url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
+      }).filter(Boolean).join('<span class="text-zinc-600"> </span>');
+      const linkRow = links
+        ? `<div class="mt-1 flex flex-wrap gap-2">${links}</div>`
+        : '';
+      return `
+              <div class="text-xs text-zinc-500 mb-4 leading-relaxed">
+                <span class="text-zinc-300">v${escapeHtml(String(version))}</span>
+                <span> · 快照 ${escapeHtml(String(count))}</span>
+                ${linkRow}
+              </div>`;
+    }
+
     function renderProjects() {
       const grid = document.getElementById('projectGrid');
       const emptyState = document.getElementById('emptyState');
@@ -627,6 +650,7 @@ Check your Browserslist config to be sure that your targets are set up correctly
              </span>`;
 
         const fullUrl = item.url.startsWith('http') ? item.url : window.location.origin + item.url;
+        const versionNote = projectVersionNote(item);
 
         const picked = selectMode && selectedIds.has(item.id);
         const check = selectMode ? `
@@ -643,7 +667,7 @@ Check your Browserslist config to be sure that your targets are set up correctly
                   ${typeBadge}
                 </div>
                 <span class="text-xs text-zinc-500 whitespace-nowrap flex-shrink-0 font-normal">
-                  ${item.created_at || '刚刚'}
+                  ${(item.project && item.updated_at) ? item.updated_at : (item.created_at || '刚刚')}
                 </span>
               </div>
 
@@ -654,6 +678,7 @@ Check your Browserslist config to be sure that your targets are set up correctly
               <p class="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-4">
                 ${escapeHtml(item.description || '暂无描述')}
               </p>
+              ${versionNote}
             </div>
 
             <div class="pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2">

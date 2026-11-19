@@ -16,6 +16,7 @@ def main():
     parser.add_argument("--desc", "-d", default="手动上传部署", help="中文项目描述")
     parser.add_argument("--type", "-t", choices=["html", "image"], default=None, help="项目类型 (html 或 image，默认自动探测)")
     parser.add_argument("--entry", "-e", default="index.html", help="入口文件名 (默认 index.html)")
+    parser.add_argument("--project", default=None, help="稳定 slug。迭代同一原型时每次复用，主链接不变，上一版进入 versions/")
     parser.add_argument("--list", "-l", action="store_true", help="列出服务器上已有的项目")
 
     args = parser.parse_args()
@@ -28,8 +29,11 @@ def main():
             return
         print(f"\n共 {len(projects)} 个项目：\n" + "-" * 60)
         for p in projects:
-            print(f"[{p.get('type', 'html').upper()}] {p.get('name')}")
-            print(f"  时间: {p.get('created_at')}  ID: {p.get('id')}")
+            version_note = ""
+            if p.get("project") and p.get("version") is not None:
+                version_note = "  v%s 快照 %s" % (p.get("version"), p.get("snapshot_count", 0))
+            print(f"[{p.get('type', 'html').upper()}] {p.get('name')}{version_note}")
+            print(f"  时间: {p.get('updated_at') or p.get('created_at')}  ID: {p.get('id')}")
             print(f"  说明: {p.get('description')}")
             print(f"  链接: {API_BASE_URL}{p.get('url')}\n")
         return
@@ -54,6 +58,8 @@ def main():
     print(f">>> 正在处理: {target_path}")
     print(f">>> 项目名称: {args.name}")
     print(f">>> 项目类型: {p_type}")
+    if args.project is not None:
+        print(f">>> 稳定项目: {args.project}")
 
     if p_type == "image":
         with open(target_path, "rb") as f:
@@ -64,12 +70,17 @@ def main():
         entry_file = args.entry
 
     print(f">>> 正在发送至 88 服务器 ({API_BASE_URL})...")
-    res = send_deploy_request(file_bytes, args.name, args.desc, project_type=p_type, entry_file=entry_file)
+    res = send_deploy_request(
+        file_bytes, args.name, args.desc,
+        project_type=p_type, entry_file=entry_file, project=args.project,
+    )
 
     full_url = f"{API_BASE_URL}{res['url']}"
     print("\n" + "=" * 60)
     print("部署成功！")
     print(f"项目名称: {res['name']}")
+    if res.get("version") is not None:
+        print(f"版本: {res.get('version')}  快照: {res.get('snapshot_count', 0)}")
     print(f"手机预览链接: {full_url}")
     print(f"总览控制台:   {API_BASE_URL}/")
     print("=" * 60 + "\n")

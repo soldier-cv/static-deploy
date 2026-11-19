@@ -49,7 +49,8 @@
 - **`location = /mcp`（端点）与 `/setup`（指引）必须分开**：指引如果与端点重叠会让 Agent 误把指引地址当端点写入配置
 - 上传体积上限由 nginx `client_max_body_size` 与 Python 侧双重限制，超限要返回明确错误（不是 500）
 - `projects.json` 并发写要用原子替换，避免截断
-- 同标题保留最新 3 版发生在 `/api/deploy` 写入时，不跑后台线程。标题分组键是 NFKC、去掉全部空白、再 casefold。`removed_old` 只出现在当次响应里
+- 同标题保留最新 3 版发生在 `/api/deploy` 写入时，不跑后台线程。标题分组键是 NFKC、去掉全部空白、再 casefold。`removed_old` 只出现在当次响应里。带 `project` 的稳定槽位不参与这组清理
+- 传了 `project`（稳定 slug）时站点 id 固定为该 slug，主目录覆盖写，上一版转存 `sites/<slug>/versions/<n>/`，每个 project 只留最近 3 个快照。不传 `project` 时仍按标题保留。迭代同一原型必须复用同一个 slug
 - 删除目录前必须先在 meta 里命中该 id。`/api/orphans` 只报告 sites 里有、meta 里没有的目录（含手动放置的命名目录），不删除
 - `GET /api/health` 额外返回 `meta_disk_consistent` 与 `orphan_count`。`GET /api/projects` 每条带 `size_bytes`
 

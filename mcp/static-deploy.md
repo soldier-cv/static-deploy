@@ -60,7 +60,7 @@ MCP 工具的参数是走对话内容的——**你塞进 MCP 的每一个字节
 
 | 工具 | 参数 | 说明 |
 |---|---|---|
-| `deploy_static_project` | `project_name`、`description`、`files`（`{相对路径: 文本内容}`）或 `html`（单文件简写）、`entry_file`（可选，默认 `index.html`） | 部署原型，返回手机直达链接 |
+| `deploy_static_project` | `project_name`、`description`、`files`（`{相对路径: 文本内容}`）或 `html`（单文件简写）、`entry_file`（可选，默认 `index.html`）、`project`（可选，稳定 slug） | 部署原型，返回手机直达链接。迭代同一原型必须复用 `project` |
 | `upload_image` | `project_name`、`description`、`filename`（如 `poster.png`）、`image_base64`（可带 `data:image/png;base64,` 前缀） | 上传图片，返回手机直达链接 |
 | `list_projects` | 无 | 列出最近已部署的项目 |
 
@@ -76,7 +76,37 @@ MCP 工具只告诉模型「这个工具有什么参数」，不告诉它「什�
 - 超过 200KB 或含二进制资源，不要塞进 MCP 参数（会浪费大量 token），
   改用 HTTP 直传：把目录打成 zip 后 POST 到 /api/deploy，见 /setup
 - 部署成功后把返回的 abs_url 直接发给用户
+- 迭代修改同一原型必须复用同一个 project slug，主链接才不变。只有真正不同的方案才换标题或不传 project
 ```
+
+## 迭代同一原型：复用 project
+
+不传 `project` 时，每次部署都是新 id，链接每次都变。同一归一化标题只留最新 3 版。Agent 如果每轮换标题（「收敛版」「7套配色」「干涉修正 v2」），分组键对不上，旧目录不会被清掉，看板和磁盘都会一直涨。
+
+迭代修改同一原型时，必须复用同一个 `project` slug。标题可以改，链接不变。只有真正不同的多方案，才不传 `project`，或另起一个新 slug。
+
+slug 规则：小写字母、数字、短横线，长度 1 到 64，不能以短横线开头或结尾。`../`、绝对路径、大写、空格、下划线、点号一律拒绝，服务端直接报错，不会静默改成别的 id。
+
+语义：
+
+- 主链接 `/sites/<slug>/` 覆盖写，永远是最新内容。入口文件不变时，完整 URL 也不变。
+- 被覆盖的上一版转存到 `/sites/<slug>/versions/<版本号>/`，nginx 可以直接打开。
+- 每个 project 只留最近 3 版快照，更旧的快照删除。当前版不在 `versions/` 里。
+- 这 3 份快照按 project 计数，不占用「按标题留 3 版」的名额，也不会被标题清理删掉。
+- 响应里的 `url` 是固定入口，另有 `version` 和 `snapshot_count`。`removed_old` 在这条路径上是空列表。
+
+```json
+deploy_static_project({
+  "project": "what-cooks",
+  "project_name": "what-cooks 首页",
+  "description": "本轮只改配色",
+  "html": "<!doctype html><html><body>最新</body></html>"
+})
+```
+
+HTTP 直传加一个头：`X-Project: what-cooks`。
+
+快照例子：`http://100.64.0.88:8088/sites/what-cooks/versions/2/index.html`。
 
 更完整的版本（含排障）可以读：`http://100.64.0.88:8088/.well-known/skills/static-deploy-mcp/SKILL.md`
 —— 如果你的 agent 支持「技能包」机制，把 SKILL.md 及其 `references/` 下三个文件一起放进它的技能目录即可。
@@ -95,6 +125,7 @@ X-Project-Name: 项目名（支持中文，直接写原文即可）
 X-Project-Desc: 一句话描述（可选）
 X-Project-Type: html | image        （默认 html）
 X-Entry-File:    index.html          （入口文件，默认 index.html）
+X-Project:       what-cooks          （可选。迭代同一原型必须复用同一个 slug）
 Content-Type:    application/octet-stream
 Body:            zip 包原始字节 / 图片原始字节
 ```
@@ -114,6 +145,8 @@ Body:            zip 包原始字节 / 图片原始字节
 ```
 
 **直接把 `abs_url` 发给用户即可**，手机可直接打开。
+
+带了 `X-Project` 时，响应在上面的字段之外还有 `project`、`version`、`snapshot_count`、`snapshots`、`updated_at`。`project_id` 就是这个 slug，连续部署不会变。不带 `X-Project` 时响应字段与以前相同。
 
 ### 各平台命令
 
@@ -177,9 +210,11 @@ print(json.load(urllib.request.urlopen(req, timeout=300))["abs_url"])
 ```powershell
 curl.exe -o "$env:USERPROFILE\.static-deploy-cli.py" http://100.64.0.88:8088/client/deploy_cli.py
 python "$env:USERPROFILE\.static-deploy-cli.py" --path "D:\project\demo" --name "演示原型" --desc "手机端预览"
+# 迭代同一原型时每次带同一个 --project，主链接 /sites/demo/ 不变，上一版进入 versions/
+python "$env:USERPROFILE\.static-deploy-cli.py" --path "D:\project\demo" --name "演示原型" --desc "第二轮" --project demo
 ```
 
-也提供 stdio 版 MCP server（本地进程，参数改为本地路径 `source_path` / `image_path`）：
+也提供 stdio 版 MCP server（本地进程，参数改为本地路径 `source_path` / `image_path`）。`deploy_static_project` 同样有可选参数 `project`，语义与远程 MCP 一致：复用同一个 slug，主链接是最新内容，`/versions/` 留最近 3 版。
 
 ```powershell
 curl.exe -o "$env:USERPROFILE\.static-deploy-mcp.py" http://100.64.0.88:8088/client/mcp_server.py
@@ -251,6 +286,9 @@ curl -s http://100.64.0.88:8088/api/health
 
 **Q: 上传成功但页面白屏？**
 多半是入口文件不对或资源路径是绝对路径（`/static/...`）。用相对路径引用资源，并确认 `X-Entry-File` 正确。
+
+**Q: 同一原型改了好几轮，链接为什么每次都变，旧的也删不掉？**
+因为没传 `project`。服务端只能按标题认「同一份原型」。标题一变，就变成另一个新站点。迭代时固定传同一个 slug，例如 `X-Project: what-cooks`。主链接保持为 `/sites/what-cooks/`，旧内容在 `/sites/what-cooks/versions/<版本号>/`，只留最近 3 版。
 
 **Q: 能删除已发布的项目吗？**
 当前不开放删除 API，避免误删。需要清理请到总览看板 `http://100.64.0.88:8088/` 操作，或联系维护者。
